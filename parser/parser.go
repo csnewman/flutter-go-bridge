@@ -6,13 +6,24 @@ import (
 	"go/ast"
 	"go/token"
 	"log"
+	"reflect"
 
 	"golang.org/x/tools/go/packages"
 )
 
-var ErrAstUnexpected = errors.New("ast contained unexpected data")
+var (
+	ErrAstUnexpected  = errors.New("ast contained unexpected data")
+	ErrAstUnsupported = errors.New("ast contained unsupported data")
+)
 
-func Parse(path string) error {
+type Package struct {
+	TypeOrder []string
+	Types     map[string]*TypeDef
+	FuncOrder []string
+	Funcs     map[string]*FuncDef
+}
+
+func Parse(path string) (*Package, error) {
 	c := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports |
 			packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedTypesSizes,
@@ -20,10 +31,13 @@ func Parse(path string) error {
 
 	pkgs, err := packages.Load(c, "file="+path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	p := &parser{}
+	p := &parser{
+		Types: map[string]*TypeDef{},
+		Funcs: map[string]*FuncDef{},
+	}
 
 	log.Println("Parsing")
 	for _, pkg := range pkgs {
@@ -33,21 +47,30 @@ func Parse(path string) error {
 			log.Println("   - File", file)
 
 			if err := p.parse(pkg.Syntax[i]); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
 	if err := p.process(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &Package{
+		TypeOrder: p.TypeOrder,
+		Types:     p.Types,
+		FuncOrder: p.FuncOrder,
+		Funcs:     p.Funcs,
+	}, nil
 }
 
 type parser struct {
 	typeSpecs []*ast.TypeSpec
 	funcDecls []*ast.FuncDecl
+	TypeOrder []string
+	Types     map[string]*TypeDef
+	FuncOrder []string
+	Funcs     map[string]*FuncDef
 }
 
 func (p *parser) parse(file *ast.File) error {
@@ -78,7 +101,7 @@ func (p *parser) parse(file *ast.File) error {
 			p.funcDecls = append(p.funcDecls, d)
 
 		default:
-			return fmt.Errorf("%w: unexpected decl %v", ErrAstUnexpected, decl)
+			return fmt.Errorf("%w: unexpected decl %v", ErrAstUnexpected, reflect.TypeOf(decl))
 		}
 	}
 
@@ -86,17 +109,19 @@ func (p *parser) parse(file *ast.File) error {
 }
 
 func (p *parser) process() error {
+	log.Println("Processing")
+
 	for _, spec := range p.typeSpecs {
-		p.processTypeSpec(spec)
+		if err := p.processTypeSpec(spec); err != nil {
+			return err
+		}
 	}
 
 	for _, decl := range p.funcDecls {
-		p.processFuncDecl(decl)
+		if err := p.processFuncDecl(decl); err != nil {
+			return err
+		}
 	}
 
 	return nil
-}
-
-func (p *parser) processTypeSpec(ts *ast.TypeSpec) {
-	log.Println("TypeSpec", ts)
 }
