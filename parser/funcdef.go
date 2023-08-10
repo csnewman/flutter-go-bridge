@@ -9,7 +9,7 @@ import (
 
 type FuncDef struct {
 	Name string
-	Sig  Type
+	Sig  *FuncType
 	Recv UsageMode
 }
 
@@ -27,9 +27,14 @@ func (p *parser) processFuncDecl(d *ast.FuncDecl) error {
 		return fmt.Errorf("%w: more than one reciever not implemented", ErrAstUnsupported)
 	}
 
-	sig, err := parseType(d.Type)
+	rawSig, err := parseType(d.Type)
 	if err != nil {
 		return err
+	}
+
+	sig, ok := rawSig.(*FuncType)
+	if !ok {
+		return fmt.Errorf("%w: unexpected func sig %v", ErrAstUnexpected, reflect.TypeOf(rawSig))
 	}
 
 	def := &FuncDef{

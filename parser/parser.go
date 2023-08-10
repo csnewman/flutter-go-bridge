@@ -17,6 +17,7 @@ var (
 )
 
 type Package struct {
+	PkgPath   string
 	TypeOrder []string
 	Types     map[string]*TypeDef
 	FuncOrder []string
@@ -39,9 +40,12 @@ func Parse(path string) (*Package, error) {
 		Funcs: map[string]*FuncDef{},
 	}
 
+	var pkgPath string
+
 	log.Println("Parsing")
 	for _, pkg := range pkgs {
 		log.Println(" - Package", pkg)
+		pkgPath = pkg.PkgPath
 
 		for i, file := range pkg.CompiledGoFiles {
 			log.Println("   - File", file)
@@ -57,6 +61,7 @@ func Parse(path string) (*Package, error) {
 	}
 
 	return &Package{
+		PkgPath:   pkgPath,
 		TypeOrder: p.TypeOrder,
 		Types:     p.Types,
 		FuncOrder: p.FuncOrder,
