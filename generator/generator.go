@@ -10,7 +10,10 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-var ErrUnexpected = errors.New("parser contained unexpected data")
+var (
+	ErrUnexpected  = errors.New("parser contained unexpected data")
+	ErrUnsupported = errors.New("unsupported")
+)
 
 type Unit struct {
 	TgtPkg    string
@@ -18,9 +21,14 @@ type Unit struct {
 }
 
 type Func struct {
-	Name    string
-	TgtName string
-	Params  []*Param
+	Name      string
+	TgtName   string
+	Params    []*Param
+	HasRes    bool
+	ResCType  string
+	ResGoType string
+	ResGoMode string
+	HasErr    bool
 }
 
 type Param struct {
@@ -76,6 +84,43 @@ func (g *generator) processFunc(f *parser.FuncDef) error {
 		TgtName: f.Name,
 	}
 
+	if len(f.Sig.Results) > 2 {
+		return fmt.Errorf("%w: %v contains more than 2 results", ErrUnsupported, len(f.Sig.Results))
+	}
+
+	if len(f.Sig.Results) > 1 {
+		res := f.Sig.Results[1]
+		fu.HasErr = true
+
+		if !parser.IsErrorType(res.Type) {
+			return fmt.Errorf("%w: second result must be error %v", ErrUnsupported, res.Type)
+		}
+	}
+
+	if len(f.Sig.Results) > 0 {
+		res := f.Sig.Results[0]
+
+		if parser.IsErrorType(res.Type) {
+			if fu.HasErr {
+				return fmt.Errorf("%w: multiple error types", ErrUnsupported)
+			}
+
+			fu.HasErr = true
+		} else {
+			fu.HasRes = true
+
+			switch t := res.Type.(type) {
+			case *parser.IdentType:
+				fu.ResCType = t.Name
+				fu.ResGoType = t.Name
+				fu.ResGoMode = "cast"
+			default:
+				return fmt.Errorf("%w: unexpected type %v", ErrUnexpected, reflect.TypeOf(res.Type))
+			}
+		}
+
+	}
+
 	for _, param := range f.Sig.Params {
 		p := &Param{
 			Name: param.Name,
@@ -83,7 +128,7 @@ func (g *generator) processFunc(f *parser.FuncDef) error {
 
 		switch t := param.Type.(type) {
 		case *parser.IdentType:
-			p.CType = "C." + t.Name
+			p.CType = t.Name
 			p.GoType = t.Name
 			p.GoMode = "cast"
 		default:

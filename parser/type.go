@@ -8,6 +8,8 @@ import (
 
 type Type interface {
 	typeMarker()
+
+	String() string
 }
 
 type IdentType struct {
@@ -36,11 +38,20 @@ type Slot struct {
 	Type Type
 }
 
-func (t *IdentType) typeMarker()   {}
-func (t *PointerType) typeMarker() {}
-func (t *ArrayType) typeMarker()   {}
-func (t *StructType) typeMarker()  {}
+func (t *IdentType) typeMarker()    {}
+func (t *IdentType) String() string { return t.Name }
+
+func (t *PointerType) typeMarker()    {}
+func (t *PointerType) String() string { return "*" + t.Inner.String() }
+
+func (t *ArrayType) typeMarker()    {}
+func (t *ArrayType) String() string { return "[]" + t.Inner.String() }
+
+func (t *StructType) typeMarker()    {}
+func (t *StructType) String() string { return "struct" }
+
 func (t *FuncType) typeMarker()    {}
+func (t *FuncType) String() string { return "func" }
 
 func parseType(expr ast.Expr) (Type, error) {
 	switch e := expr.(type) {
@@ -121,6 +132,13 @@ func parseFieldList(l *ast.FieldList) ([]*Slot, error) {
 			return nil, err
 		}
 
+		if f.Names == nil {
+			fields = append(fields, &Slot{
+				Type: inner,
+			})
+			continue
+		}
+
 		for _, name := range f.Names {
 			fields = append(fields, &Slot{
 				Name: name.Name,
@@ -130,4 +148,13 @@ func parseFieldList(l *ast.FieldList) ([]*Slot, error) {
 	}
 
 	return fields, nil
+}
+
+func IsErrorType(t Type) bool {
+	i, ok := t.(*IdentType)
+	if !ok {
+		return false
+	}
+
+	return i.Name == "error"
 }
