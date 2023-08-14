@@ -23,17 +23,13 @@ import (
 /*
 #include <stdint.h>
 {{- range $f := $top.Functions}}
-{{- if or $f.HasRes $f.HasErr}}
 
 typedef struct {
     {{- if $f.HasRes}}
     {{$f.ResCType}} res;
     {{- end}}
-    {{- if $f.HasErr}}
     void* err;
-    {{- end}}
-} fgb_ret_{{$f.Name}};
-{{- end}}
+} fgb_ret_{{$f.SnakeName}};
 {{- end}}
 */
 import "C"
@@ -41,9 +37,8 @@ import "C"
 // Required by cgo
 func main() {}
 {{range $f := $top.Functions}}
-//export fgb_{{$f.Name}}
-func fgb_{{$f.Name}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}} C.{{$p.CType}}{{end}}) 
-{{- if or $f.HasRes $f.HasErr}} C.fgb_ret_{{$f.Name}} {{- end}} {
+//export fgb_{{$f.SnakeName}}
+func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}} C.{{$p.CType}}{{end}}) C.fgb_ret_{{$f.SnakeName}} {
 	{{- range $i, $p := $f.Params}}
 	{{- if eq $p.GoMode "cast"}}
 	{{$p.Name}}Go := ({{$p.GoType}})({{$p.Name}})
@@ -54,29 +49,24 @@ func fgb_{{$f.Name}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Na
 	orig.{{$f.TgtName}}({{range $i, $p := $f.Params}}
 		{{- if gt $i 0}}, {{end}}{{$p.Name}}Go
 	{{- end}})
-    {{- if or $f.HasRes $f.HasErr}}
     {{- if $f.HasRes}}
     {{- if eq $f.ResGoMode "cast"}}
 	cres := (C.{{$f.ResCType}})(gres)
 	{{- end}}
     {{- end}}
 
-    {{- if $f.HasErr}}
-
     var cerr unsafe.Pointer
+    {{- if $f.HasErr}}
     if gerr != nil {
         cerr = unsafe.Pointer(C.CString(gerr.Error()))
     }
     {{- end}}
 
-    return C.fgb_ret_{{$f.Name}} {
+    return C.fgb_ret_{{$f.SnakeName}} {
         {{- if $f.HasRes}}
         res: cres,
         {{- end}}
-        {{- if $f.HasErr}}
         err: cerr,
-        {{- end}}
     }
-    {{- end}} 
 }
 {{end}}`

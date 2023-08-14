@@ -21,14 +21,17 @@ type Unit struct {
 }
 
 type Func struct {
-	Name      string
-	TgtName   string
-	Params    []*Param
-	HasRes    bool
-	ResCType  string
-	ResGoType string
-	ResGoMode string
-	HasErr    bool
+	SnakeName   string
+	CamelName   string
+	PascalName  string
+	TgtName     string
+	Params      []*Param
+	HasRes      bool
+	ResCType    string
+	ResGoType   string
+	ResGoMode   string
+	ResDartType string
+	HasErr      bool
 }
 
 type Param struct {
@@ -38,7 +41,7 @@ type Param struct {
 	GoMode string
 }
 
-func Generate(goDest string, in *parser.Package) error {
+func Generate(goDest string, dartDest string, in *parser.Package) error {
 	g := &generator{
 		unit: &Unit{
 			TgtPkg: in.PkgPath,
@@ -61,6 +64,18 @@ func Generate(goDest string, in *parser.Package) error {
 		return err
 	}
 
+	// Generate dart
+	f, err = os.Create(dartDest)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	if err := GetDartBridgeTemplate().Execute(f, g.unit); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -80,8 +95,10 @@ func (g *generator) process(p *parser.Package) error {
 
 func (g *generator) processFunc(f *parser.FuncDef) error {
 	fu := &Func{
-		Name:    strcase.ToSnake(f.Name),
-		TgtName: f.Name,
+		SnakeName:  strcase.ToSnake(f.Name),
+		PascalName: strcase.ToCamel(f.Name),
+		CamelName:  strcase.ToLowerCamel(f.Name),
+		TgtName:    f.Name,
 	}
 
 	if len(f.Sig.Results) > 2 {
@@ -114,6 +131,7 @@ func (g *generator) processFunc(f *parser.FuncDef) error {
 				fu.ResCType = t.Name
 				fu.ResGoType = t.Name
 				fu.ResGoMode = "cast"
+				fu.ResDartType = t.Name
 			default:
 				return fmt.Errorf("%w: unexpected type %v", ErrUnexpected, reflect.TypeOf(res.Type))
 			}
