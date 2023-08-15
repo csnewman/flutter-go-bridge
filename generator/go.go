@@ -15,6 +15,7 @@ var goBridgeTemplateSrc = `{{$top := . -}}
 package main
 
 import (
+    "fmt"
     "unsafe"
 
 	orig "{{$top.TgtPkg}}"
@@ -38,8 +39,18 @@ import "C"
 func main() {}
 {{range $f := $top.Functions}}
 //export fgb_{{$f.SnakeName}}
-func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}} C.{{$p.CType}}{{end}}) C.fgb_ret_{{$f.SnakeName}} {
-	{{- range $i, $p := $f.Params}}
+func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}} C.{{$p.CType}}{{end}}) (resw C.fgb_ret_{{$f.SnakeName}}) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+
+		resw = C.fgb_ret_{{$f.SnakeName}} {
+			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
+		}
+	}()
+	{{range $i, $p := $f.Params}}
 	{{- if eq $p.GoMode "cast"}}
 	{{$p.Name}}Go := ({{$p.GoType}})({{$p.Name}})
 	{{- end}}
