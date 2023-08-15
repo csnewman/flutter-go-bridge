@@ -35,10 +35,12 @@ type Func struct {
 }
 
 type Param struct {
-	Name   string
-	CType  string
-	GoType string
-	GoMode string
+	Name      string
+	CType     string
+	GoType    string
+	GoMode    string
+	DartCType string
+	DartType  string
 }
 
 func Generate(goDest string, dartDest string, in *parser.Package) error {
@@ -149,6 +151,8 @@ func (g *generator) processFunc(f *parser.FuncDef) error {
 			p.CType = t.Name
 			p.GoType = t.Name
 			p.GoMode = "cast"
+			p.DartCType = "ffi.Int32"
+			p.DartType = t.Name
 		default:
 			return fmt.Errorf("%w: unexpected type %v", ErrUnexpected, reflect.TypeOf(param.Type))
 		}

@@ -17,7 +17,13 @@ import 'package:ffi/ffi.dart';
 
 final class BridgeException implements Exception {
   String cause;
+
   BridgeException(this.cause);
+
+  @override
+  String toString() {
+    return 'BridgeException: $cause';
+  }
 }
 
 abstract interface class Bridge {
@@ -26,7 +32,9 @@ abstract interface class Bridge {
     return _FfiBridge(lib);
   }
 {{range $f := $top.Functions}}
-  {{if $f.HasRes}}{{$f.ResDartType}} {{else}}void {{end}}{{$f.CamelName}}();
+  {{if $f.HasRes}}{{$f.ResDartType}} {{else}}void {{end}}{{$f.CamelName}}(
+    {{- range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.DartType}} {{$p.Name}}{{end -}}
+  );
 {{end -}}
 }
 
@@ -38,26 +46,34 @@ final class _FgbRet{{$f.PascalName}} extends ffi.Struct {
   external {{$f.ResCType}} res;
   {{- end}}
   external ffi.Pointer<ffi.Void> err;
-} 
+}
+
+typedef _FgbDefDart{{$f.PascalName}} = _FgbRet{{$f.PascalName}} Function(
+  {{- range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.DartType}}{{end -}}
+);
+typedef _FgbDefC{{$f.PascalName}} = _FgbRet{{$f.PascalName}} Function(
+  {{- range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.DartCType}}{{end -}}
+);
 {{- end}}
 
 final class _FfiBridge implements Bridge {
 {{- range $f := $top.Functions}}
-  late _FgbRet{{$f.PascalName}} Function() _{{$f.CamelName}}Ptr;
+  late _FgbDefDart{{$f.PascalName}} _{{$f.CamelName}}Ptr;
 {{- end}}
 
   _FfiBridge(ffi.DynamicLibrary lib) {
 {{- range $f := $top.Functions}}
-    _{{$f.CamelName}}Ptr = lib.lookupFunction<
-        _FgbRet{{$f.PascalName}} Function(),
-        _FgbRet{{$f.PascalName}} Function()
-    >("fgb_{{$f.SnakeName}}");
+    _{{$f.CamelName}}Ptr = lib.lookupFunction<_FgbDefC{{$f.PascalName}}, _FgbDefDart{{$f.PascalName}}>("fgb_{{$f.SnakeName}}");
 {{- end}}
   }
 {{range $f := $top.Functions}}
   @override
-  {{if $f.HasRes}}{{$f.ResDartType}} {{else}}void {{end}}{{$f.CamelName}}() {
-    var res = _{{$f.CamelName}}Ptr();
+  {{if $f.HasRes}}{{$f.ResDartType}} {{else}}void {{end}}{{$f.CamelName}}(
+    {{- range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.DartType}} {{$p.Name}}{{end -}}
+  ) {
+    var res = _{{$f.CamelName}}Ptr(
+      {{- range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}}{{end -}}
+    );
 
     if (res.err != ffi.nullptr) {
       var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
@@ -66,9 +82,10 @@ final class _FfiBridge implements Bridge {
 
       throw BridgeException(errMsg);
     }
+    {{- if $f.HasRes}}
 
-    // TODO
-    throw BridgeException("todo process response");
+    return res.res;
+    {{- end}}
   }
 {{end -}}
 }
