@@ -16,9 +16,12 @@ package main
 
 import (
     "fmt"
+	"sync"
+	"sync/atomic"
     "unsafe"
 
 	orig "{{$top.TgtPkg}}"
+	"flutter-go-bridge/runtime"
 )
 
 /*
@@ -35,8 +38,25 @@ typedef struct {
 */
 import "C"
 
+var (
+	handles   = sync.Map{}
+	handleIdx uint64
+)
+
 // Required by cgo
 func main() {}
+
+//export fgb_internal_init
+func fgb_internal_init(p unsafe.Pointer) unsafe.Pointer {
+	err := runtime.InitializeApi(p)
+
+    var cerr unsafe.Pointer
+    if err != nil {
+        cerr = unsafe.Pointer(C.CString(err.Error()))
+    }
+
+	return cerr
+}
 {{range $f := $top.Functions}}
 //export fgb_{{$f.SnakeName}}
 func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}} C.{{$p.CType}}{{end}}) (resw C.fgb_ret_{{$f.SnakeName}}) {
@@ -79,5 +99,38 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{
         {{- end}}
         err: cerr,
     }
+}
+
+
+//export fgbasync_{{$f.SnakeName}}
+func fgbasync_{{$f.SnakeName}}({{range $p := $f.Params}}{{$p.Name}} C.{{$p.CType}}, {{end}}fgbPort int64) {
+	go func() {
+		h := atomic.AddUint64(&handleIdx, 1)
+		if h == 0 {
+			panic("ran out of handle space")
+		}
+
+		handles.Store(h, fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}}{{end}}))
+
+		sent := runtime.Send(fgbPort, []uint64{h}, func() {
+			handles.LoadAndDelete(h)
+		})
+        if !sent {
+            handles.LoadAndDelete(h)
+        }
+	}()
+}
+
+
+//export fgbasyncres_{{$f.SnakeName}}
+func fgbasyncres_{{$f.SnakeName}}(h uint64) C.fgb_ret_{{$f.SnakeName}} {
+	v, ok := handles.LoadAndDelete(h)
+	if !ok {
+		return C.fgb_ret_{{$f.SnakeName}}{
+			err: unsafe.Pointer(C.CString("result handle is not valid")),
+		}
+	}
+
+	return (v).(C.fgb_ret_{{$f.SnakeName}})
 }
 {{end}}`
