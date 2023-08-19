@@ -158,3 +158,91 @@ func IsErrorType(t Type) bool {
 
 	return i.Name == "error"
 }
+
+var inbuiltTypes = map[string]bool{
+	"error":  true,
+	"string": true,
+	"int8":   false,
+	"uint8":  false,
+	"byte":   false,
+	"int16":  false,
+	"uint16": false,
+	"int32":  false,
+	"uint32": false,
+	"int64":  false,
+	"uint64": false,
+	"int":    false,
+	"uint":   false,
+}
+
+func (p *parser) processUsage(t Type) (bool, error) {
+	var recvType string
+	var recvMode UsageMode
+
+	switch r := t.(type) {
+	case *IdentType:
+		_, ok := inbuiltTypes[r.Name]
+		if ok {
+			return false, nil
+		}
+
+		recvMode = UsageModeValue
+		recvType = r.Name
+	case *PointerType:
+		ir, ok := r.Inner.(*IdentType)
+		if !ok {
+			return false, fmt.Errorf("%w: unexpected base type %v", ErrAstUnexpected, reflect.TypeOf(r.Inner))
+		}
+
+		allowPtr, ok := inbuiltTypes[ir.Name]
+		if ok {
+			if allowPtr {
+				return false, nil
+			}
+
+			return false, fmt.Errorf("%w: pointer to %v is not supported", ErrAstUnsupported, reflect.TypeOf(r.Inner))
+		}
+
+		recvMode = UsageModeRef
+		recvType = ir.Name
+	case *FuncType:
+		changed := false
+
+		for _, s := range r.Params {
+			c, err := p.processUsage(s.Type)
+			if err != nil {
+				return false, err
+			}
+
+			changed = changed || c
+		}
+
+		for _, s := range r.Results {
+			c, err := p.processUsage(s.Type)
+			if err != nil {
+				return false, err
+			}
+
+			changed = changed || c
+		}
+
+		return changed, nil
+	default:
+		return false, fmt.Errorf("%w: unexpected type %v", ErrAstUnexpected, reflect.TypeOf(t))
+	}
+
+	recvDef, ok := p.Types[recvType]
+	if !ok {
+		return false, fmt.Errorf("%w: type is not defined: %v", ErrAstUnexpected, recvType)
+	}
+
+	changed := recvDef.Usage != UsageModeNone
+
+	if recvDef.Usage != UsageModeNone && recvDef.Usage != recvMode {
+		return false, fmt.Errorf("%w: %v has both %v and %v usages", ErrAstUnsupported, recvType, recvDef.Usage, recvMode)
+	}
+
+	recvDef.Usage = recvMode
+
+	return changed, nil
+}

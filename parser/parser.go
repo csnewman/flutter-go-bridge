@@ -128,5 +128,29 @@ func (p *parser) process() error {
 		}
 	}
 
+	changed := true
+
+	for changed {
+		changed = false
+
+		for _, def := range p.Types {
+			if def.Usage != UsageModeValue {
+				continue
+			}
+
+			switch t := def.Type.(type) {
+			case *StructType:
+				for _, f := range t.Fields {
+					c, err := p.processUsage(f.Type)
+					if err != nil {
+						return err
+					}
+
+					changed = changed || c
+				}
+			}
+		}
+	}
+
 	return nil
 }

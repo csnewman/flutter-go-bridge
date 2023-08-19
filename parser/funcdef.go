@@ -37,6 +37,10 @@ func (p *parser) processFuncDecl(d *ast.FuncDecl) error {
 		return fmt.Errorf("%w: unexpected func sig %v", ErrAstUnexpected, reflect.TypeOf(rawSig))
 	}
 
+	if _, err := p.processUsage(sig); err != nil {
+		return err
+	}
+
 	def := &FuncDef{
 		Name: name,
 		Sig:  sig,
