@@ -53,6 +53,8 @@ func Parse(path string) (*Package, error) {
 			if err := p.parse(pkg.Syntax[i]); err != nil {
 				return nil, err
 			}
+
+			ast.Print(pkg.Fset, pkg.Syntax[i])
 		}
 	}
 

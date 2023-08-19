@@ -124,7 +124,14 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{
 	orig.{{$f.TgtName}}({{range $i, $p := $f.Params}}
 		{{- if gt $i 0}}, {{end}}{{$p.Name}}Go
 	{{- end}})
-    {{- if $f.HasRes}}
+    {{- if $f.HasErr}}
+    if gerr != nil {
+		return C.fgb_ret_{{$f.SnakeName}} {
+			err: unsafe.Pointer(C.CString(gerr.Error())),
+		}
+    }
+    {{- end}}
+    {{if $f.HasRes}}
     {{- if eq $f.Res.GoMode "cast"}}
 	cres := (C.{{$f.Res.CType}})(gres)
     {{- else if eq $f.Res.GoMode "map"}}
@@ -134,18 +141,10 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{
 	{{- end}}
     {{- end}}
 
-    var cerr unsafe.Pointer
-    {{- if $f.HasErr}}
-    if gerr != nil {
-        cerr = unsafe.Pointer(C.CString(gerr.Error()))
-    }
-    {{- end}}
-
     return C.fgb_ret_{{$f.SnakeName}} {
         {{- if $f.HasRes}}
         res: cres,
         {{- end}}
-        err: cerr,
     }
 }
 
