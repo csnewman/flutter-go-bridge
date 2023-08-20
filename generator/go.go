@@ -15,6 +15,7 @@ var goBridgeTemplateSrc = `{{$top := . -}}
 package main
 
 import (
+	"errors"
     "fmt"
 	"sync"
 	"sync/atomic"
@@ -25,6 +26,7 @@ import (
 )
 
 /*
+#include <stdlib.h>
 #include <stdint.h>
 {{- range $s := $top.ValueStructs}}
 
@@ -48,6 +50,7 @@ import "C"
 var (
 	handles   = sync.Map{}
 	handleIdx uint64
+	ErrDart   = errors.New("dart")
 )
 
 // Required by cgo
@@ -63,6 +66,26 @@ func fgb_internal_init(p unsafe.Pointer) unsafe.Pointer {
     }
 
 	return cerr
+}
+
+func mapToString(from unsafe.Pointer) string {
+	res := C.GoString((*C.char)(from))
+	C.free(from)
+	return res
+}
+
+func mapFromString(from string) unsafe.Pointer {
+	return unsafe.Pointer(C.CString(from))
+}
+
+func mapToError(from unsafe.Pointer) error {
+	res := C.GoString((*C.char)(from))
+	C.free(from)
+	return fmt.Errorf("%w: %v", ErrDart, res)
+}
+
+func mapFromError(from error) unsafe.Pointer {
+	return unsafe.Pointer(C.CString(from.Error()))
 }
 {{- range $s := $top.ValueStructs}}
 

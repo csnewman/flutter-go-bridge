@@ -171,7 +171,7 @@ final class _FfiBridge implements Bridge {
     {{- if eq $p.DartMode "direct"}}
     var {{$p.Name}}Dart = {{$p.Name}};
     {{- else if eq $p.DartMode "map"}}
-    var {{$p.Name}}Dart = _mapFrom{{$p.DartType}}({{$p.Name}});
+    var {{$p.Name}}Dart = _mapFrom{{$p.MapName}}({{$p.Name}});
     {{- else}}
     var {{$p.Name}}Dart = unknown;
     {{- end}}
@@ -216,7 +216,7 @@ final class _FfiBridge implements Bridge {
     {{- if eq $f.Res.DartMode "direct"}}
     return res.res;
     {{- else if eq $f.Res.DartMode "map"}}
-    return _mapTo{{$f.Res.DartType}}(res.res);
+    return _mapTo{{$f.Res.MapName}}(res.res);
     {{- else}}
     return unknown;
     {{- end}}
@@ -232,7 +232,7 @@ final class _FfiBridge implements Bridge {
       {{- if eq $f.DartMode "direct" -}}
       from.{{$f.CamelName}}
       {{- else if eq $f.DartMode "map" -}}
-      _mapTo{{$f.DartType}}(from.{{$f.CamelName}})
+      _mapTo{{$f.MapName}}(from.{{$f.CamelName}})
       {{- else -}}
       unknown
       {{- end}}
@@ -246,7 +246,7 @@ final class _FfiBridge implements Bridge {
     {{- if eq $f.DartMode "direct"}}
     res.{{$f.CamelName}} = from.{{$f.CamelName}};
     {{- else if eq $f.DartMode "map"}}
-    res.{{$f.CamelName}} = _mapFrom{{$f.DartType}}(from.{{$f.CamelName}});
+    res.{{$f.CamelName}} = _mapFrom{{$f.MapName}}(from.{{$f.CamelName}});
     {{- else}}
     unknown
     {{- end}}
@@ -254,5 +254,16 @@ final class _FfiBridge implements Bridge {
     return res;
   }
 {{- end}}
+
+  String _mapToString(ffi.Pointer<ffi.Void> from) {
+    var res = ffi.Pointer<Utf8>.fromAddress(from.address).toDartString();
+    calloc.free(from);
+    return res;
+  }
+
+  ffi.Pointer<ffi.Void> _mapFromString(String from) {
+    var res = from.toNativeUtf8();
+    return ffi.Pointer<ffi.Void>.fromAddress(res.address);
+  }
 }
 `

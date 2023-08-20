@@ -190,8 +190,8 @@ func (g *generator) processFunc(f *parser.FuncDef) error {
 }
 
 var inbuiltTypes = map[string]Type{
-	"error":  {CType: "void*", GoType: "error", GoMode: "todo", DartCType: "todo", DartType: "todo", DartMode: "todo"},
-	"string": {CType: "void*", GoType: "string", GoMode: "todo", DartCType: "todo", DartType: "todo", DartMode: "todo"},
+	"error":  {CType: "void*", GoType: "error", GoMode: "map", MapName: "Error", DartCType: "ffi.Pointer<ffi.Void>", DartType: "String", DartMode: "map"},
+	"string": {CType: "void*", GoType: "string", GoMode: "map", MapName: "String", DartCType: "ffi.Pointer<ffi.Void>", DartType: "String", DartMode: "map"},
 	"int8":   {CType: "int8", GoType: "int8", GoMode: "cast", DartCType: "ffi.Int8", DartType: "int", DartMode: "direct"},
 	"uint8":  {CType: "uint8", GoType: "uint8", GoMode: "cast", DartCType: "ffi.Uint8", DartType: "int", DartMode: "direct"},
 	"byte":   {CType: "byte", GoType: "byte", GoMode: "cast", DartCType: "ffi.Byte", DartType: "int", DartMode: "direct"},
