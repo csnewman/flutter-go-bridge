@@ -3,10 +3,10 @@ package main
 
 import (
 	"errors"
-    "fmt"
+	"fmt"
 	"sync"
 	"sync/atomic"
-    "unsafe"
+	"unsafe"
 
 	orig "flutter-go-bridge/example"
 	"flutter-go-bridge/runtime"
@@ -17,28 +17,28 @@ import (
 #include <stdint.h>
 
 typedef struct {
-    int a;
-    void* d;
+	int a;
+	void* d;
 } fgb_vt_inner;
 
 typedef struct {
-    int v_1;
-    int v_2;
-    fgb_vt_inner i_1;
+	int v_1;
+	int v_2;
+	fgb_vt_inner i_1;
 } fgb_vt_some_val;
 
 typedef struct {
-    void* err;
+	void* err;
 } fgb_ret_example;
 
 typedef struct {
-    fgb_vt_some_val res;
-    void* err;
+	fgb_vt_some_val res;
+	void* err;
 } fgb_ret_other;
 
 typedef struct {
-    int res;
-    void* err;
+	int res;
+	void* err;
 } fgb_ret_call_me;
 */
 import "C"
@@ -56,10 +56,10 @@ func main() {}
 func fgbinternal_init(p unsafe.Pointer) unsafe.Pointer {
 	err := runtime.InitializeApi(p)
 
-    var cerr unsafe.Pointer
-    if err != nil {
-        cerr = unsafe.Pointer(C.CString(err.Error()))
-    }
+	var cerr unsafe.Pointer
+	if err != nil {
+		cerr = unsafe.Pointer(C.CString(err.Error()))
+	}
 
 	return cerr
 }
@@ -96,7 +96,7 @@ func mapFromError(from error) unsafe.Pointer {
 
 //export fgbempty_inner
 func fgbempty_inner() (res C.fgb_vt_inner) {
-    return
+	return
 }
 
 func mapToInner(from C.fgb_vt_inner) (res orig.Inner) {
@@ -113,7 +113,7 @@ func mapFromInner(from orig.Inner) (res C.fgb_vt_inner) {
 
 //export fgbempty_some_val
 func fgbempty_some_val() (res C.fgb_vt_some_val) {
-    return
+	return
 }
 
 func mapToSomeVal(from C.fgb_vt_some_val) (res orig.SomeVal) {
@@ -138,22 +138,22 @@ func fgb_example(v C.fgb_vt_some_val) (resw C.fgb_ret_example) {
 			return
 		}
 
-		resw = C.fgb_ret_example {
+		resw = C.fgb_ret_example{
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
 	
 	vGo := mapToSomeVal(v)
 	gerr := orig.Example(vGo)
-    if gerr != nil {
-		return C.fgb_ret_example {
+	if gerr != nil {
+		return C.fgb_ret_example{
 			err: unsafe.Pointer(C.CString(gerr.Error())),
 		}
-    }
-    
+	}
+	
 
-    return C.fgb_ret_example {
-    }
+	return C.fgb_ret_example{
+	}
 }
 
 //export fgbasync_example
@@ -169,9 +169,9 @@ func fgbasync_example(v C.fgb_vt_some_val, fgbPort int64) {
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
 		})
-        if !sent {
-            handles.LoadAndDelete(h)
-        }
+		if !sent {
+			handles.LoadAndDelete(h)
+		}
 	}()
 }
 
@@ -195,18 +195,18 @@ func fgb_other() (resw C.fgb_ret_other) {
 			return
 		}
 
-		resw = C.fgb_ret_other {
+		resw = C.fgb_ret_other{
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
 	
 	gres := orig.Other()
-    
+	
 	cres := mapFromSomeVal(gres)
 
-    return C.fgb_ret_other {
-        res: cres,
-    }
+	return C.fgb_ret_other{
+		res: cres,
+	}
 }
 
 //export fgbasync_other
@@ -222,9 +222,9 @@ func fgbasync_other(fgbPort int64) {
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
 		})
-        if !sent {
-            handles.LoadAndDelete(h)
-        }
+		if !sent {
+			handles.LoadAndDelete(h)
+		}
 	}()
 }
 
@@ -248,23 +248,23 @@ func fgb_call_me() (resw C.fgb_ret_call_me) {
 			return
 		}
 
-		resw = C.fgb_ret_call_me {
+		resw = C.fgb_ret_call_me{
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
 	
 	gres, gerr := orig.CallMe()
-    if gerr != nil {
-		return C.fgb_ret_call_me {
+	if gerr != nil {
+		return C.fgb_ret_call_me{
 			err: unsafe.Pointer(C.CString(gerr.Error())),
 		}
-    }
-    
+	}
+	
 	cres := (C.int)(gres)
 
-    return C.fgb_ret_call_me {
-        res: cres,
-    }
+	return C.fgb_ret_call_me{
+		res: cres,
+	}
 }
 
 //export fgbasync_call_me
@@ -280,9 +280,9 @@ func fgbasync_call_me(fgbPort int64) {
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
 		})
-        if !sent {
-            handles.LoadAndDelete(h)
-        }
+		if !sent {
+			handles.LoadAndDelete(h)
+		}
 	}()
 }
 

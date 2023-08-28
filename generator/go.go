@@ -17,10 +17,10 @@ package main
 
 import (
 	"errors"
-    "fmt"
+	"fmt"
 	"sync"
 	"sync/atomic"
-    "unsafe"
+	"unsafe"
 
 	orig "{{$top.TgtPkg}}"
 	"flutter-go-bridge/runtime"
@@ -33,16 +33,16 @@ import (
 
 typedef struct {
 {{- range $f := $s.Fields}}
-    {{$f.CType}} {{$f.SnakeName}};{{end}}
+	{{$f.CType}} {{$f.SnakeName}};{{end}}
 } fgb_vt_{{$s.SnakeName}};
 {{- end}}
 {{- range $f := $top.Functions}}
 
 typedef struct {
-    {{- if $f.HasRes}}
-    {{$f.Res.CType}} res;
-    {{- end}}
-    void* err;
+	{{- if $f.HasRes}}
+	{{$f.Res.CType}} res;
+	{{- end}}
+	void* err;
 } fgb_ret_{{$f.SnakeName}};
 {{- end}}
 */
@@ -61,10 +61,10 @@ func main() {}
 func fgbinternal_init(p unsafe.Pointer) unsafe.Pointer {
 	err := runtime.InitializeApi(p)
 
-    var cerr unsafe.Pointer
-    if err != nil {
-        cerr = unsafe.Pointer(C.CString(err.Error()))
-    }
+	var cerr unsafe.Pointer
+	if err != nil {
+		cerr = unsafe.Pointer(C.CString(err.Error()))
+	}
 
 	return cerr
 }
@@ -102,11 +102,11 @@ func mapFromError(from error) unsafe.Pointer {
 
 //export fgbempty_{{$s.SnakeName}}
 func fgbempty_{{$s.SnakeName}}() (res C.fgb_vt_{{$s.SnakeName}}) {
-    return
+	return
 }
 
 func mapTo{{$s.PascalName}}(from C.fgb_vt_{{$s.SnakeName}}) (res orig.{{$s.OrigName}}) {
-    {{- range $f := $s.Fields}}
+	{{- range $f := $s.Fields}}
 	{{- if eq $f.GoMode "cast"}}
 	res.{{$f.OrigName}} = ({{$f.GoType}})(from.{{$f.SnakeName}})
 	{{- else if eq $f.GoMode "map"}}
@@ -119,7 +119,7 @@ func mapTo{{$s.PascalName}}(from C.fgb_vt_{{$s.SnakeName}}) (res orig.{{$s.OrigN
 }
 
 func mapFrom{{$s.PascalName}}(from orig.{{$s.OrigName}}) (res C.fgb_vt_{{$s.SnakeName}}) {
-    {{- range $f := $s.Fields}}
+	{{- range $f := $s.Fields}}
 	{{- if eq $f.GoMode "cast"}}
 	res.{{$f.SnakeName}} = (C.{{$f.CType}})(from.{{$f.OrigName}})
 	{{- else if eq $f.GoMode "map"}}
@@ -140,7 +140,7 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{
 			return
 		}
 
-		resw = C.fgb_ret_{{$f.SnakeName}} {
+		resw = C.fgb_ret_{{$f.SnakeName}}{
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
@@ -158,28 +158,28 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{
 	orig.{{$f.TgtName}}({{range $i, $p := $f.Params}}
 		{{- if gt $i 0}}, {{end}}{{$p.Name}}Go
 	{{- end}})
-    {{- if $f.HasErr}}
-    if gerr != nil {
-		return C.fgb_ret_{{$f.SnakeName}} {
+	{{- if $f.HasErr}}
+	if gerr != nil {
+		return C.fgb_ret_{{$f.SnakeName}}{
 			err: unsafe.Pointer(C.CString(gerr.Error())),
 		}
-    }
-    {{- end}}
-    {{if $f.HasRes}}
-    {{- if eq $f.Res.GoMode "cast"}}
+	}
+	{{- end}}
+	{{if $f.HasRes}}
+	{{- if eq $f.Res.GoMode "cast"}}
 	cres := (C.{{$f.Res.CType}})(gres)
-    {{- else if eq $f.Res.GoMode "map"}}
+	{{- else if eq $f.Res.GoMode "map"}}
 	cres := mapFrom{{$f.Res.MapName}}(gres)
 	{{- else}}
 	cres := unknown
 	{{- end}}
-    {{- end}}
+	{{- end}}
 
-    return C.fgb_ret_{{$f.SnakeName}} {
-        {{- if $f.HasRes}}
-        res: cres,
-        {{- end}}
-    }
+	return C.fgb_ret_{{$f.SnakeName}}{
+		{{- if $f.HasRes}}
+		res: cres,
+		{{- end}}
+	}
 }
 
 //export fgbasync_{{$f.SnakeName}}
@@ -195,9 +195,9 @@ func fgbasync_{{$f.SnakeName}}({{range $p := $f.Params}}{{$p.Name}} C.{{$p.CType
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
 		})
-        if !sent {
-            handles.LoadAndDelete(h)
-        }
+		if !sent {
+			handles.LoadAndDelete(h)
+		}
 	}()
 }
 
