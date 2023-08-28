@@ -66,6 +66,31 @@ final class _FgbCSomeVal extends ffi.Struct {
 typedef _FgbEmptySomeVal = _FgbCSomeVal Function();
 
 typedef _FgbDefInit = ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>);
+typedef _FgbDefIntCAlloc = ffi.Pointer Function(ffi.IntPtr);
+typedef _FgbDefIntDartAlloc = ffi.Pointer Function(int);
+typedef _FgbDefIntCFree = ffi.Void Function(ffi.Pointer);
+typedef _FgbDefIntDartFree = void Function(ffi.Pointer);
+
+class _GoAllocator implements ffi.Allocator {
+  final _FgbDefIntDartAlloc _allocPtr;
+  final _FgbDefIntDartFree _freePtr;
+
+  const _GoAllocator(this._allocPtr, this._freePtr);
+
+  @override
+  ffi.Pointer<T> allocate<T extends ffi.NativeType>(int byteCount, {int? alignment}) {
+    ffi.Pointer<T> result = _allocPtr(byteCount).cast();
+    if (result.address == 0) {
+      throw ArgumentError('Could not allocate $byteCount bytes.');
+    }
+    return result;
+  }
+
+  @override
+  void free(ffi.Pointer pointer) {
+  	_freePtr(pointer);
+  }
+}
 
 final class _FgbRetExample extends ffi.Struct {
   external ffi.Pointer<ffi.Void> err;
@@ -104,6 +129,7 @@ typedef _FgbAsyncResDefDartCallMe = _FgbRetCallMe Function(int);
 typedef _FgbAsyncResDefCCallMe = _FgbRetCallMe Function(ffi.Uint64);
 
 final class _FfiBridge implements Bridge {
+  late _GoAllocator _allocator;
   late _FgbDefDartExample _examplePtr;
   late _FgbAsyncDefDartExample _examplePtrAsync;
   late _FgbAsyncResDefDartExample _examplePtrAsyncRes;
@@ -117,12 +143,16 @@ final class _FfiBridge implements Bridge {
   late _FgbEmptySomeVal _emptySomeValPtr;
 
   _FfiBridge(ffi.DynamicLibrary lib) {
-    var initPtr = lib.lookupFunction<_FgbDefInit, _FgbDefInit>("fgb_internal_init");
+    var allocPtr = lib.lookupFunction<_FgbDefIntCAlloc, _FgbDefIntDartAlloc>("fgbinternal_alloc");
+    var freePtr = lib.lookupFunction<_FgbDefIntCFree, _FgbDefIntDartFree>("fgbinternal_free");
+    _allocator = _GoAllocator(allocPtr, freePtr);
+
+    var initPtr = lib.lookupFunction<_FgbDefInit, _FgbDefInit>("fgbinternal_init");
     var initRes = initPtr(ffi.NativeApi.initializeApiDLData);
     if (initRes != ffi.nullptr) {
       var errPtr = ffi.Pointer<Utf8>.fromAddress(initRes.address);
       var errMsg = errPtr.toDartString(); 
-      calloc.free(errPtr);
+      _allocator.free(errPtr);
 
       throw BridgeException(errMsg);
     }
@@ -163,7 +193,7 @@ final class _FfiBridge implements Bridge {
     if (res.err != ffi.nullptr) {
       var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
       var errMsg = errPtr.toDartString(); 
-      calloc.free(errPtr);
+      _allocator.free(errPtr);
 
       throw BridgeException(errMsg);
     }
@@ -186,7 +216,7 @@ final class _FfiBridge implements Bridge {
     if (res.err != ffi.nullptr) {
       var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
       var errMsg = errPtr.toDartString(); 
-      calloc.free(errPtr);
+      _allocator.free(errPtr);
 
       throw BridgeException(errMsg);
     }
@@ -210,7 +240,7 @@ final class _FfiBridge implements Bridge {
     if (res.err != ffi.nullptr) {
       var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
       var errMsg = errPtr.toDartString(); 
-      calloc.free(errPtr);
+      _allocator.free(errPtr);
 
       throw BridgeException(errMsg);
     }
@@ -242,12 +272,12 @@ final class _FfiBridge implements Bridge {
 
   String _mapToString(ffi.Pointer<ffi.Void> from) {
     var res = ffi.Pointer<Utf8>.fromAddress(from.address).toDartString();
-    calloc.free(from);
+    _allocator.free(from);
     return res;
   }
 
   ffi.Pointer<ffi.Void> _mapFromString(String from) {
-    var res = from.toNativeUtf8();
+    var res = from.toNativeUtf8(allocator: _allocator);
     return ffi.Pointer<ffi.Void>.fromAddress(res.address);
   }
 }
