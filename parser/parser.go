@@ -24,7 +24,7 @@ type Package struct {
 	Funcs     map[string]*FuncDef
 }
 
-func Parse(path string) (*Package, error) {
+func Parse(path string, printAST bool) (*Package, error) {
 	c := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports |
 			packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedTypesSizes,
@@ -50,11 +50,13 @@ func Parse(path string) (*Package, error) {
 		for i, file := range pkg.CompiledGoFiles {
 			log.Println("   - File", file)
 
+			if printAST {
+				ast.Print(pkg.Fset, pkg.Syntax[i])
+			}
+
 			if err := p.parse(pkg.Syntax[i]); err != nil {
 				return nil, err
 			}
-
-			ast.Print(pkg.Fset, pkg.Syntax[i])
 		}
 	}
 

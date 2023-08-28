@@ -7,7 +7,7 @@ import (
 	"os"
 	"reflect"
 
-	"flutter-go-bridge/parser"
+	"github.com/csnewman/flutter-go-bridge/parser"
 	"github.com/iancoleman/strcase"
 )
 
@@ -72,35 +72,41 @@ func Generate(goDest string, dartDest string, in *parser.Package) error {
 		},
 	}
 
-	log.Println("Generating")
+	log.Println("Preparing")
 	if err := g.process(in); err != nil {
 		return err
 	}
 
+	log.Println("Generating")
+
 	// Generate go
-	log.Println("Generating Go")
-	f, err := os.Create(goDest)
-	if err != nil {
-		return err
-	}
+	if goDest != "" {
+		log.Println(" - Go", goDest)
+		f, err := os.Create(goDest)
+		if err != nil {
+			return err
+		}
 
-	defer f.Close()
+		defer f.Close()
 
-	if err := GetGoBridgeTemplate().Execute(f, g.unit); err != nil {
-		return err
+		if err := GetGoBridgeTemplate().Execute(f, g.unit); err != nil {
+			return err
+		}
 	}
 
 	// Generate dart
-	log.Println("Generating Dart")
-	f, err = os.Create(dartDest)
-	if err != nil {
-		return err
-	}
+	if dartDest != "" {
+		log.Println(" - Dart", dartDest)
+		f, err := os.Create(dartDest)
+		if err != nil {
+			return err
+		}
 
-	defer f.Close()
+		defer f.Close()
 
-	if err := GetDartBridgeTemplate().Execute(f, g.unit); err != nil {
-		return err
+		if err := GetDartBridgeTemplate().Execute(f, g.unit); err != nil {
+			return err
+		}
 	}
 
 	return nil

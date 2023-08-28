@@ -23,7 +23,7 @@ import (
 	"unsafe"
 
 	orig "{{$top.TgtPkg}}"
-	"flutter-go-bridge/runtime"
+	"github.com/csnewman/flutter-go-bridge/runtime"
 )
 
 /*

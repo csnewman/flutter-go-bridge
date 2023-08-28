@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	orig "flutter-go-bridge/example"
-	"flutter-go-bridge/runtime"
+	orig "github.com/csnewman/flutter-go-bridge/example"
+	"github.com/csnewman/flutter-go-bridge/runtime"
 )
 
 /*

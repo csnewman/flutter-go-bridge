@@ -1,3 +1,4 @@
+//go:generate go run github.com/csnewman/flutter-go-bridge/cmd/flutter-go-bridge generate --src example.go --go bridge/bridge.gen.go --dart ../exampleapp/lib/bridge.gen.dart
 package example
 
 import (
@@ -29,6 +30,6 @@ func Other() SomeVal {
 func CallMe() (int, error) {
 	log.Println("CallMe")
 
-	// return 123, fmt.Errorf("Hell")
+	// return 123, fmt.Errorf("Hello")
 	return 123, nil
 }
