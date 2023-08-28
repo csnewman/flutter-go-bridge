@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(golib)
+
+# Adjust to match your project
 set(LIBNAME "example")
 set(GOSRC "${CMAKE_CURRENT_SOURCE_DIR}/../../")
+set(GOMAIN "example/bridge/bridge.gen.go")
+
+# Only edit below this line for advanced use cases
 
 set(GOLDF "-s -w")
 if (CMAKE_BUILD_TYPE STREQUAL Debug)
@@ -45,7 +50,7 @@ add_custom_command(
         GOOS=${GOOS} GOARCH=${GOARCH}
         CC=${GOCC}
         go build -buildmode=c-shared -ldflags=${GOLDF} -o ${GOOUT}
-        example/bridge/bridge.gen.go
+        ${GOMAIN}
 )
 
 add_custom_target(lib${LIBNAME} DEPENDS ${GOOUT})
