@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -7,7 +8,8 @@ import 'bridge.gen.dart';
 late Bridge b;
 
 void main() {
-  var lib = DynamicLibrary.open("libexample.so");
+  var lib =
+      DynamicLibrary.open(Platform.isWindows ? "example.dll" : "libexample.so");
   b = Bridge.open(lib);
 
   b.example(SomeVal(1, 2, Inner(1, "abc")));

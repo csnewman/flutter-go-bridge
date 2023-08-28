@@ -57,6 +57,10 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# go-flutter-bridge
+add_subdirectory(../golib gobuild)
+add_dependencies(${BINARY_NAME} libexample)
+list(APPEND PLUGIN_BUNDLED_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/gobuild/example.dll)
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can

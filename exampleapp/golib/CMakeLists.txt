@@ -23,8 +23,12 @@ set(GOARCH ${ARCH_MAP_${SYSTEM_PROCESSOR}})
 
 if (CMAKE_SYSTEM_NAME STREQUAL Linux)
     set(GOOS linux)
-    set(GOCC ${CMAKE_C_COMPILER})
+    set(GOCC "${CMAKE_C_COMPILER}")
     set(GOOUT "${CMAKE_CURRENT_BINARY_DIR}/lib${LIBNAME}.so")
+elseif (CMAKE_SYSTEM_NAME STREQUAL Windows)
+    set(GOOS windows)
+    # Leaving GOCC to default on Windows. MSVCC is not compatible with golang.
+    set(GOOUT "${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}.dll")
 elseif (CMAKE_SYSTEM_NAME STREQUAL Android)
     set(GOOS android)
     set(GOCC "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDCC_MAP_${SYSTEM_PROCESSOR}}${ANDROID_NATIVE_API_LEVEL}-clang")
