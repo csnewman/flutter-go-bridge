@@ -46,14 +46,23 @@ abstract interface class Bridge {
 
 final class {{$s.PascalName}} {
 {{- range $f := $s.Fields}}
-    {{$f.DartType}} {{$f.CamelName}};
+  {{$f.DartType}} {{$f.CamelName}};
 {{- end}}
 
-    {{$s.PascalName}}(
+  {{$s.PascalName}}(
 {{- range $i, $f := $s.Fields -}}
 {{if gt $i 0}}, {{end}}this.{{$f.CamelName}}
 {{- end -}}
 );
+
+  @override
+  String toString() {
+    return '{{$s.PascalName}}{
+{{- range $i, $f := $s.Fields -}}
+{{if gt $i 0}}, {{end}}{{$f.CamelName}}: ${{$f.CamelName}}
+{{- end -}}
+}';
+  }
 }
 
 final class _FgbC{{$s.PascalName}} extends ffi.Struct {
