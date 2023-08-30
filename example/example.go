@@ -1,35 +1,26 @@
 //go:generate go run github.com/csnewman/flutter-go-bridge/cmd/flutter-go-bridge generate --src example.go --go bridge/bridge.gen.go --dart ../exampleapp/lib/bridge.gen.dart
 package example
 
-import (
-	"log"
-)
+import "fmt"
 
-type Inner struct {
-	A int
-	D string
+func Add(a int, b int) int {
+	return a + b
 }
 
-type SomeVal struct {
-	V1 int
-	V2 int
-	I1 Inner
+type Point struct {
+	X    int
+	Y    int
+	Name string
 }
 
-func Example(v SomeVal) error {
-	log.Println("Call Example", v)
-	log.Println("> ", v.I1.D)
-
-	return nil
+func AddPoints(a Point, b Point) Point {
+	return Point{
+		X:    a.X + b.X,
+		Y:    a.Y + b.Y,
+		Name: a.Name + "+" + b.Name,
+	}
 }
 
-func Other() SomeVal {
-	return SomeVal{}
-}
-
-func CallMe() (int, error) {
-	log.Println("CallMe")
-
-	// return 123, fmt.Errorf("Hello")
-	return 123, nil
+func AddError(a int, b int) (int, error) {
+	return 0, fmt.Errorf("add res was %v", a+b)
 }

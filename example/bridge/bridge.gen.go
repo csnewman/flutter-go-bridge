@@ -17,29 +17,25 @@ import (
 #include <stdint.h>
 
 typedef struct {
-	int a;
-	void* d;
-} fgb_vt_inner;
-
-typedef struct {
-	int v_1;
-	int v_2;
-	fgb_vt_inner i_1;
-} fgb_vt_some_val;
-
-typedef struct {
-	void* err;
-} fgb_ret_example;
-
-typedef struct {
-	fgb_vt_some_val res;
-	void* err;
-} fgb_ret_other;
+	int x;
+	int y;
+	void* name;
+} fgb_vt_point;
 
 typedef struct {
 	int res;
 	void* err;
-} fgb_ret_call_me;
+} fgb_ret_add;
+
+typedef struct {
+	fgb_vt_point res;
+	void* err;
+} fgb_ret_add_points;
+
+typedef struct {
+	int res;
+	void* err;
+} fgb_ret_add_error;
 */
 import "C"
 
@@ -94,130 +90,58 @@ func mapFromError(from error) unsafe.Pointer {
 	return unsafe.Pointer(C.CString(from.Error()))
 }
 
-//export fgbempty_inner
-func fgbempty_inner() (res C.fgb_vt_inner) {
+//export fgbempty_point
+func fgbempty_point() (res C.fgb_vt_point) {
 	return
 }
 
-func mapToInner(from C.fgb_vt_inner) (res orig.Inner) {
-	res.A = (int)(from.a)
-	res.D = mapToString(from.d)
+func mapToPoint(from C.fgb_vt_point) (res orig.Point) {
+	res.X = (int)(from.x)
+	res.Y = (int)(from.y)
+	res.Name = mapToString(from.name)
 	return
 }
 
-func mapFromInner(from orig.Inner) (res C.fgb_vt_inner) {
-	res.a = (C.int)(from.A)
-	res.d = mapFromString(from.D)
+func mapFromPoint(from orig.Point) (res C.fgb_vt_point) {
+	res.x = (C.int)(from.X)
+	res.y = (C.int)(from.Y)
+	res.name = mapFromString(from.Name)
 	return
 }
 
-//export fgbempty_some_val
-func fgbempty_some_val() (res C.fgb_vt_some_val) {
-	return
-}
-
-func mapToSomeVal(from C.fgb_vt_some_val) (res orig.SomeVal) {
-	res.V1 = (int)(from.v_1)
-	res.V2 = (int)(from.v_2)
-	res.I1 = mapToInner(from.i_1)
-	return
-}
-
-func mapFromSomeVal(from orig.SomeVal) (res C.fgb_vt_some_val) {
-	res.v_1 = (C.int)(from.V1)
-	res.v_2 = (C.int)(from.V2)
-	res.i_1 = mapFromInner(from.I1)
-	return
-}
-
-//export fgb_example
-func fgb_example(v C.fgb_vt_some_val) (resw C.fgb_ret_example) {
+//export fgb_add
+func fgb_add(a C.int, b C.int) (resw C.fgb_ret_add) {
 	defer func() {
 		r := recover()
 		if r == nil {
 			return
 		}
 
-		resw = C.fgb_ret_example{
+		resw = C.fgb_ret_add{
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
 	
-	vGo := mapToSomeVal(v)
-	gerr := orig.Example(vGo)
-	if gerr != nil {
-		return C.fgb_ret_example{
-			err: unsafe.Pointer(C.CString(gerr.Error())),
-		}
-	}
+	aGo := (int)(a)
+	bGo := (int)(b)
+	gres := orig.Add(aGo, bGo)
 	
+	cres := (C.int)(gres)
 
-	return C.fgb_ret_example{
-	}
-}
-
-//export fgbasync_example
-func fgbasync_example(v C.fgb_vt_some_val, fgbPort int64) {
-	go func() {
-		h := atomic.AddUint64(&handleIdx, 1)
-		if h == 0 {
-			panic("ran out of handle space")
-		}
-
-		handles.Store(h, fgb_example(v))
-
-		sent := runtime.Send(fgbPort, []uint64{h}, func() {
-			handles.LoadAndDelete(h)
-		})
-		if !sent {
-			handles.LoadAndDelete(h)
-		}
-	}()
-}
-
-//export fgbasyncres_example
-func fgbasyncres_example(h uint64) C.fgb_ret_example {
-	v, ok := handles.LoadAndDelete(h)
-	if !ok {
-		return C.fgb_ret_example{
-			err: unsafe.Pointer(C.CString("result handle is not valid")),
-		}
-	}
-
-	return (v).(C.fgb_ret_example)
-}
-
-//export fgb_other
-func fgb_other() (resw C.fgb_ret_other) {
-	defer func() {
-		r := recover()
-		if r == nil {
-			return
-		}
-
-		resw = C.fgb_ret_other{
-			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
-		}
-	}()
-	
-	gres := orig.Other()
-	
-	cres := mapFromSomeVal(gres)
-
-	return C.fgb_ret_other{
+	return C.fgb_ret_add{
 		res: cres,
 	}
 }
 
-//export fgbasync_other
-func fgbasync_other(fgbPort int64) {
+//export fgbasync_add
+func fgbasync_add(a C.int, b C.int, fgbPort int64) {
 	go func() {
 		h := atomic.AddUint64(&handleIdx, 1)
 		if h == 0 {
 			panic("ran out of handle space")
 		}
 
-		handles.Store(h, fgb_other())
+		handles.Store(h, fgb_add(a, b))
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
@@ -228,54 +152,111 @@ func fgbasync_other(fgbPort int64) {
 	}()
 }
 
-//export fgbasyncres_other
-func fgbasyncres_other(h uint64) C.fgb_ret_other {
+//export fgbasyncres_add
+func fgbasyncres_add(h uint64) C.fgb_ret_add {
 	v, ok := handles.LoadAndDelete(h)
 	if !ok {
-		return C.fgb_ret_other{
+		return C.fgb_ret_add{
 			err: unsafe.Pointer(C.CString("result handle is not valid")),
 		}
 	}
 
-	return (v).(C.fgb_ret_other)
+	return (v).(C.fgb_ret_add)
 }
 
-//export fgb_call_me
-func fgb_call_me() (resw C.fgb_ret_call_me) {
+//export fgb_add_points
+func fgb_add_points(a C.fgb_vt_point, b C.fgb_vt_point) (resw C.fgb_ret_add_points) {
 	defer func() {
 		r := recover()
 		if r == nil {
 			return
 		}
 
-		resw = C.fgb_ret_call_me{
+		resw = C.fgb_ret_add_points{
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
 	
-	gres, gerr := orig.CallMe()
+	aGo := mapToPoint(a)
+	bGo := mapToPoint(b)
+	gres := orig.AddPoints(aGo, bGo)
+	
+	cres := mapFromPoint(gres)
+
+	return C.fgb_ret_add_points{
+		res: cres,
+	}
+}
+
+//export fgbasync_add_points
+func fgbasync_add_points(a C.fgb_vt_point, b C.fgb_vt_point, fgbPort int64) {
+	go func() {
+		h := atomic.AddUint64(&handleIdx, 1)
+		if h == 0 {
+			panic("ran out of handle space")
+		}
+
+		handles.Store(h, fgb_add_points(a, b))
+
+		sent := runtime.Send(fgbPort, []uint64{h}, func() {
+			handles.LoadAndDelete(h)
+		})
+		if !sent {
+			handles.LoadAndDelete(h)
+		}
+	}()
+}
+
+//export fgbasyncres_add_points
+func fgbasyncres_add_points(h uint64) C.fgb_ret_add_points {
+	v, ok := handles.LoadAndDelete(h)
+	if !ok {
+		return C.fgb_ret_add_points{
+			err: unsafe.Pointer(C.CString("result handle is not valid")),
+		}
+	}
+
+	return (v).(C.fgb_ret_add_points)
+}
+
+//export fgb_add_error
+func fgb_add_error(a C.int, b C.int) (resw C.fgb_ret_add_error) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+
+		resw = C.fgb_ret_add_error{
+			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
+		}
+	}()
+	
+	aGo := (int)(a)
+	bGo := (int)(b)
+	gres, gerr := orig.AddError(aGo, bGo)
 	if gerr != nil {
-		return C.fgb_ret_call_me{
+		return C.fgb_ret_add_error{
 			err: unsafe.Pointer(C.CString(gerr.Error())),
 		}
 	}
 	
 	cres := (C.int)(gres)
 
-	return C.fgb_ret_call_me{
+	return C.fgb_ret_add_error{
 		res: cres,
 	}
 }
 
-//export fgbasync_call_me
-func fgbasync_call_me(fgbPort int64) {
+//export fgbasync_add_error
+func fgbasync_add_error(a C.int, b C.int, fgbPort int64) {
 	go func() {
 		h := atomic.AddUint64(&handleIdx, 1)
 		if h == 0 {
 			panic("ran out of handle space")
 		}
 
-		handles.Store(h, fgb_call_me())
+		handles.Store(h, fgb_add_error(a, b))
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
@@ -286,14 +267,14 @@ func fgbasync_call_me(fgbPort int64) {
 	}()
 }
 
-//export fgbasyncres_call_me
-func fgbasyncres_call_me(h uint64) C.fgb_ret_call_me {
+//export fgbasyncres_add_error
+func fgbasyncres_add_error(h uint64) C.fgb_ret_add_error {
 	v, ok := handles.LoadAndDelete(h)
 	if !ok {
-		return C.fgb_ret_call_me{
+		return C.fgb_ret_add_error{
 			err: unsafe.Pointer(C.CString("result handle is not valid")),
 		}
 	}
 
-	return (v).(C.fgb_ret_call_me)
+	return (v).(C.fgb_ret_add_error)
 }

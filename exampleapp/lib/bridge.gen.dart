@@ -19,51 +19,41 @@ abstract interface class Bridge {
     return _FfiBridge(lib);
   }
 
-  void example(SomeVal v);
+  int add(int a, int b);
 
-  Future<void> exampleAsync(SomeVal v);
+  Future<int> addAsync(int a, int b);
 
-  SomeVal other();
+  Point addPoints(Point a, Point b);
 
-  Future<SomeVal> otherAsync();
+  Future<Point> addPointsAsync(Point a, Point b);
 
-  int callMe();
+  int addError(int a, int b);
 
-  Future<int> callMeAsync();
+  Future<int> addErrorAsync(int a, int b);
 }
 
-final class Inner {
-    int a;
-    String d;
+final class Point {
+  int x;
+  int y;
+  String name;
 
-    Inner(this.a, this.d);
+  Point(this.x, this.y, this.name);
+
+  @override
+  String toString() {
+    return 'Point{x: $x, y: $y, name: $name}';
+  }
 }
 
-final class _FgbCInner extends ffi.Struct {
+final class _FgbCPoint extends ffi.Struct {
   @ffi.Int()
-  external int a;
-  external ffi.Pointer<ffi.Void> d;
-}
-
-typedef _FgbEmptyInner = _FgbCInner Function();
-
-final class SomeVal {
-    int v1;
-    int v2;
-    Inner i1;
-
-    SomeVal(this.v1, this.v2, this.i1);
-}
-
-final class _FgbCSomeVal extends ffi.Struct {
+  external int x;
   @ffi.Int()
-  external int v1;
-  @ffi.Int()
-  external int v2;
-  external _FgbCInner i1;
+  external int y;
+  external ffi.Pointer<ffi.Void> name;
 }
 
-typedef _FgbEmptySomeVal = _FgbCSomeVal Function();
+typedef _FgbEmptyPoint = _FgbCPoint Function();
 
 typedef _FgbDefInit = ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>);
 typedef _FgbDefIntCAlloc = ffi.Pointer Function(ffi.IntPtr);
@@ -92,55 +82,56 @@ class _GoAllocator implements ffi.Allocator {
   }
 }
 
-final class _FgbRetExample extends ffi.Struct {
-  external ffi.Pointer<ffi.Void> err;
-}
-
-typedef _FgbDefDartExample = _FgbRetExample Function(_FgbCSomeVal);
-typedef _FgbDefCExample = _FgbRetExample Function(_FgbCSomeVal);
-typedef _FgbAsyncDefDartExample = void Function(_FgbCSomeVal, int);
-typedef _FgbAsyncDefCExample = ffi.Void Function(_FgbCSomeVal, ffi.Uint64);
-typedef _FgbAsyncResDefDartExample = _FgbRetExample Function(int);
-typedef _FgbAsyncResDefCExample = _FgbRetExample Function(ffi.Uint64);
-
-final class _FgbRetOther extends ffi.Struct {
-  external _FgbCSomeVal res;
-  external ffi.Pointer<ffi.Void> err;
-}
-
-typedef _FgbDefDartOther = _FgbRetOther Function();
-typedef _FgbDefCOther = _FgbRetOther Function();
-typedef _FgbAsyncDefDartOther = void Function(int);
-typedef _FgbAsyncDefCOther = ffi.Void Function(ffi.Uint64);
-typedef _FgbAsyncResDefDartOther = _FgbRetOther Function(int);
-typedef _FgbAsyncResDefCOther = _FgbRetOther Function(ffi.Uint64);
-
-final class _FgbRetCallMe extends ffi.Struct {
+final class _FgbRetAdd extends ffi.Struct {
   @ffi.Int()
   external int res;
   external ffi.Pointer<ffi.Void> err;
 }
 
-typedef _FgbDefDartCallMe = _FgbRetCallMe Function();
-typedef _FgbDefCCallMe = _FgbRetCallMe Function();
-typedef _FgbAsyncDefDartCallMe = void Function(int);
-typedef _FgbAsyncDefCCallMe = ffi.Void Function(ffi.Uint64);
-typedef _FgbAsyncResDefDartCallMe = _FgbRetCallMe Function(int);
-typedef _FgbAsyncResDefCCallMe = _FgbRetCallMe Function(ffi.Uint64);
+typedef _FgbDefDartAdd = _FgbRetAdd Function(int, int);
+typedef _FgbDefCAdd = _FgbRetAdd Function(ffi.Int, ffi.Int);
+typedef _FgbAsyncDefDartAdd = void Function(int, int, int);
+typedef _FgbAsyncDefCAdd = ffi.Void Function(ffi.Int, ffi.Int, ffi.Uint64);
+typedef _FgbAsyncResDefDartAdd = _FgbRetAdd Function(int);
+typedef _FgbAsyncResDefCAdd = _FgbRetAdd Function(ffi.Uint64);
+
+final class _FgbRetAddPoints extends ffi.Struct {
+  external _FgbCPoint res;
+  external ffi.Pointer<ffi.Void> err;
+}
+
+typedef _FgbDefDartAddPoints = _FgbRetAddPoints Function(_FgbCPoint, _FgbCPoint);
+typedef _FgbDefCAddPoints = _FgbRetAddPoints Function(_FgbCPoint, _FgbCPoint);
+typedef _FgbAsyncDefDartAddPoints = void Function(_FgbCPoint, _FgbCPoint, int);
+typedef _FgbAsyncDefCAddPoints = ffi.Void Function(_FgbCPoint, _FgbCPoint, ffi.Uint64);
+typedef _FgbAsyncResDefDartAddPoints = _FgbRetAddPoints Function(int);
+typedef _FgbAsyncResDefCAddPoints = _FgbRetAddPoints Function(ffi.Uint64);
+
+final class _FgbRetAddError extends ffi.Struct {
+  @ffi.Int()
+  external int res;
+  external ffi.Pointer<ffi.Void> err;
+}
+
+typedef _FgbDefDartAddError = _FgbRetAddError Function(int, int);
+typedef _FgbDefCAddError = _FgbRetAddError Function(ffi.Int, ffi.Int);
+typedef _FgbAsyncDefDartAddError = void Function(int, int, int);
+typedef _FgbAsyncDefCAddError = ffi.Void Function(ffi.Int, ffi.Int, ffi.Uint64);
+typedef _FgbAsyncResDefDartAddError = _FgbRetAddError Function(int);
+typedef _FgbAsyncResDefCAddError = _FgbRetAddError Function(ffi.Uint64);
 
 final class _FfiBridge implements Bridge {
   late _GoAllocator _allocator;
-  late _FgbDefDartExample _examplePtr;
-  late _FgbAsyncDefDartExample _examplePtrAsync;
-  late _FgbAsyncResDefDartExample _examplePtrAsyncRes;
-  late _FgbDefDartOther _otherPtr;
-  late _FgbAsyncDefDartOther _otherPtrAsync;
-  late _FgbAsyncResDefDartOther _otherPtrAsyncRes;
-  late _FgbDefDartCallMe _callMePtr;
-  late _FgbAsyncDefDartCallMe _callMePtrAsync;
-  late _FgbAsyncResDefDartCallMe _callMePtrAsyncRes;
-  late _FgbEmptyInner _emptyInnerPtr;
-  late _FgbEmptySomeVal _emptySomeValPtr;
+  late _FgbDefDartAdd _addPtr;
+  late _FgbAsyncDefDartAdd _addPtrAsync;
+  late _FgbAsyncResDefDartAdd _addPtrAsyncRes;
+  late _FgbDefDartAddPoints _addPointsPtr;
+  late _FgbAsyncDefDartAddPoints _addPointsPtrAsync;
+  late _FgbAsyncResDefDartAddPoints _addPointsPtrAsyncRes;
+  late _FgbDefDartAddError _addErrorPtr;
+  late _FgbAsyncDefDartAddError _addErrorPtrAsync;
+  late _FgbAsyncResDefDartAddError _addErrorPtrAsyncRes;
+  late _FgbEmptyPoint _emptyPointPtr;
 
   _FfiBridge(ffi.DynamicLibrary lib) {
     var allocPtr = lib.lookupFunction<_FgbDefIntCAlloc, _FgbDefIntDartAlloc>("fgbinternal_alloc");
@@ -157,39 +148,42 @@ final class _FfiBridge implements Bridge {
       throw BridgeException(errMsg);
     }
 
-    _examplePtr = lib.lookupFunction<_FgbDefCExample, _FgbDefDartExample>("fgb_example");
-    _examplePtrAsync = lib.lookupFunction<_FgbAsyncDefCExample, _FgbAsyncDefDartExample>("fgbasync_example");
-    _examplePtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCExample, _FgbAsyncResDefDartExample>("fgbasyncres_example");
-    _otherPtr = lib.lookupFunction<_FgbDefCOther, _FgbDefDartOther>("fgb_other");
-    _otherPtrAsync = lib.lookupFunction<_FgbAsyncDefCOther, _FgbAsyncDefDartOther>("fgbasync_other");
-    _otherPtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCOther, _FgbAsyncResDefDartOther>("fgbasyncres_other");
-    _callMePtr = lib.lookupFunction<_FgbDefCCallMe, _FgbDefDartCallMe>("fgb_call_me");
-    _callMePtrAsync = lib.lookupFunction<_FgbAsyncDefCCallMe, _FgbAsyncDefDartCallMe>("fgbasync_call_me");
-    _callMePtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCCallMe, _FgbAsyncResDefDartCallMe>("fgbasyncres_call_me");
+    _addPtr = lib.lookupFunction<_FgbDefCAdd, _FgbDefDartAdd>("fgb_add");
+    _addPtrAsync = lib.lookupFunction<_FgbAsyncDefCAdd, _FgbAsyncDefDartAdd>("fgbasync_add");
+    _addPtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCAdd, _FgbAsyncResDefDartAdd>("fgbasyncres_add");
+    _addPointsPtr = lib.lookupFunction<_FgbDefCAddPoints, _FgbDefDartAddPoints>("fgb_add_points");
+    _addPointsPtrAsync = lib.lookupFunction<_FgbAsyncDefCAddPoints, _FgbAsyncDefDartAddPoints>("fgbasync_add_points");
+    _addPointsPtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCAddPoints, _FgbAsyncResDefDartAddPoints>("fgbasyncres_add_points");
+    _addErrorPtr = lib.lookupFunction<_FgbDefCAddError, _FgbDefDartAddError>("fgb_add_error");
+    _addErrorPtrAsync = lib.lookupFunction<_FgbAsyncDefCAddError, _FgbAsyncDefDartAddError>("fgbasync_add_error");
+    _addErrorPtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCAddError, _FgbAsyncResDefDartAddError>("fgbasyncres_add_error");
 
-    _emptyInnerPtr = lib.lookupFunction<_FgbEmptyInner, _FgbEmptyInner>("fgbempty_inner");
-    _emptySomeValPtr = lib.lookupFunction<_FgbEmptySomeVal, _FgbEmptySomeVal>("fgbempty_some_val");
+    _emptyPointPtr = lib.lookupFunction<_FgbEmptyPoint, _FgbEmptyPoint>("fgbempty_point");
   }
 
   @override
-  void example(SomeVal v) {
-    var vDart = _mapFromSomeVal(v);
+  int add(int a, int b) {
+    var aDart = a;
     
-    _processExample(_examplePtr(vDart));
+    var bDart = b;
+    
+    return _processAdd(_addPtr(aDart, bDart));
   }
 
   @override
-  Future<void> exampleAsync(SomeVal v) async {
-    var vDart = _mapFromSomeVal(v);
+  Future<int> addAsync(int a, int b) async {
+    var aDart = a;
     
-    var recv = ReceivePort('AsyncRecv(example)');
-    _examplePtrAsync(vDart, recv.sendPort.nativePort);
+    var bDart = b;
+    
+    var recv = ReceivePort('AsyncRecv(add)');
+    _addPtrAsync(aDart, bDart, recv.sendPort.nativePort);
     var msg = await recv.first;
     recv.close();
-    _processExample(_examplePtrAsyncRes(msg[0]));
+    return _processAdd(_addPtrAsyncRes(msg[0]));
   }
 
-  void _processExample(_FgbRetExample res) {
+  int _processAdd(_FgbRetAdd res) {
     if (res.err != ffi.nullptr) {
       var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
       var errMsg = errPtr.toDartString(); 
@@ -197,22 +191,31 @@ final class _FfiBridge implements Bridge {
 
       throw BridgeException(errMsg);
     }
+    return res.res;
   }
   @override
-  SomeVal other() {
-    return _processOther(_otherPtr());
+  Point addPoints(Point a, Point b) {
+    var aDart = _mapFromPoint(a);
+    
+    var bDart = _mapFromPoint(b);
+    
+    return _processAddPoints(_addPointsPtr(aDart, bDart));
   }
 
   @override
-  Future<SomeVal> otherAsync() async {
-    var recv = ReceivePort('AsyncRecv(other)');
-    _otherPtrAsync(recv.sendPort.nativePort);
+  Future<Point> addPointsAsync(Point a, Point b) async {
+    var aDart = _mapFromPoint(a);
+    
+    var bDart = _mapFromPoint(b);
+    
+    var recv = ReceivePort('AsyncRecv(addPoints)');
+    _addPointsPtrAsync(aDart, bDart, recv.sendPort.nativePort);
     var msg = await recv.first;
     recv.close();
-    return _processOther(_otherPtrAsyncRes(msg[0]));
+    return _processAddPoints(_addPointsPtrAsyncRes(msg[0]));
   }
 
-  SomeVal _processOther(_FgbRetOther res) {
+  Point _processAddPoints(_FgbRetAddPoints res) {
     if (res.err != ffi.nullptr) {
       var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
       var errMsg = errPtr.toDartString(); 
@@ -220,23 +223,31 @@ final class _FfiBridge implements Bridge {
 
       throw BridgeException(errMsg);
     }
-    return _mapToSomeVal(res.res);
+    return _mapToPoint(res.res);
   }
   @override
-  int callMe() {
-    return _processCallMe(_callMePtr());
+  int addError(int a, int b) {
+    var aDart = a;
+    
+    var bDart = b;
+    
+    return _processAddError(_addErrorPtr(aDart, bDart));
   }
 
   @override
-  Future<int> callMeAsync() async {
-    var recv = ReceivePort('AsyncRecv(callMe)');
-    _callMePtrAsync(recv.sendPort.nativePort);
+  Future<int> addErrorAsync(int a, int b) async {
+    var aDart = a;
+    
+    var bDart = b;
+    
+    var recv = ReceivePort('AsyncRecv(addError)');
+    _addErrorPtrAsync(aDart, bDart, recv.sendPort.nativePort);
     var msg = await recv.first;
     recv.close();
-    return _processCallMe(_callMePtrAsyncRes(msg[0]));
+    return _processAddError(_addErrorPtrAsyncRes(msg[0]));
   }
 
-  int _processCallMe(_FgbRetCallMe res) {
+  int _processAddError(_FgbRetAddError res) {
     if (res.err != ffi.nullptr) {
       var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
       var errMsg = errPtr.toDartString(); 
@@ -247,26 +258,15 @@ final class _FfiBridge implements Bridge {
     return res.res;
   }
 
-  Inner _mapToInner(_FgbCInner from) {
-    return Inner(from.a, _mapToString(from.d));
+  Point _mapToPoint(_FgbCPoint from) {
+    return Point(from.x, from.y, _mapToString(from.name));
   }
 
-  _FgbCInner _mapFromInner(Inner from) {
-    var res = _emptyInnerPtr();
-    res.a = from.a;
-    res.d = _mapFromString(from.d);
-    return res;
-  }
-
-  SomeVal _mapToSomeVal(_FgbCSomeVal from) {
-    return SomeVal(from.v1, from.v2, _mapToInner(from.i1));
-  }
-
-  _FgbCSomeVal _mapFromSomeVal(SomeVal from) {
-    var res = _emptySomeValPtr();
-    res.v1 = from.v1;
-    res.v2 = from.v2;
-    res.i1 = _mapFromInner(from.i1);
+  _FgbCPoint _mapFromPoint(Point from) {
+    var res = _emptyPointPtr();
+    res.x = from.x;
+    res.y = from.y;
+    res.name = _mapFromString(from.name);
     return res;
   }
 
