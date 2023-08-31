@@ -62,7 +62,7 @@ func (p *parser) processFuncDecl(d *ast.FuncDecl) error {
 	case *PointerType:
 		ir, ok := r.Inner.(*IdentType)
 		if !ok {
-			return fmt.Errorf("%w: unexpected base type %v", ErrAstUnexpected, reflect.TypeOf(r.Inner))
+			return fmt.Errorf("%w: unexpected nested pointer %v: %v", ErrAstUnexpected, reflect.TypeOf(r.Inner), r.Inner)
 		}
 
 		def.Recv = UsageModeRef

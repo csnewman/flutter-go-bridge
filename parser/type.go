@@ -194,7 +194,7 @@ func (p *parser) processUsage(t Type) (bool, error) {
 	case *PointerType:
 		ir, ok := r.Inner.(*IdentType)
 		if !ok {
-			return false, fmt.Errorf("%w: unexpected base type %v", ErrAstUnexpected, reflect.TypeOf(r.Inner))
+			return false, fmt.Errorf("%w: unsupported nested pointer %v", ErrAstUnsupported, r)
 		}
 
 		allowPtr, ok := inbuiltTypes[ir.Name]
@@ -203,7 +203,7 @@ func (p *parser) processUsage(t Type) (bool, error) {
 				return false, nil
 			}
 
-			return false, fmt.Errorf("%w: pointer to %v is not supported", ErrAstUnsupported, reflect.TypeOf(r.Inner))
+			return false, fmt.Errorf("%w: pointer to inbuilt (%v) is not supported", ErrAstUnsupported, r.Inner)
 		}
 
 		recvMode = UsageModeRef

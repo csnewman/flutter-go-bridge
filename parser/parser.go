@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"log"
 	"reflect"
+	"unicode"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -14,6 +15,7 @@ import (
 var (
 	ErrAstUnexpected  = errors.New("ast contained unexpected data")
 	ErrAstUnsupported = errors.New("ast contained unsupported data")
+	ErrInternal       = errors.New("internal error")
 )
 
 type Package struct {
@@ -61,6 +63,10 @@ func Parse(path string, printAST bool) (*Package, error) {
 	}
 
 	if err := p.process(); err != nil {
+		return nil, err
+	}
+
+	if err := p.validate(); err != nil {
 		return nil, err
 	}
 
@@ -153,6 +159,39 @@ func (p *parser) process() error {
 					changed = changed || c
 				}
 			}
+		}
+	}
+
+	return nil
+}
+
+func (p *parser) validate() error {
+	log.Println("Validating")
+
+	for _, def := range p.Types {
+		log.Println(" - Type ", def.Name)
+
+		switch t := def.Type.(type) {
+		case *StructType:
+			switch def.Usage {
+			case UsageModeNone:
+				log.Printf("  - WARNING: %v is unused", def.Name)
+			case UsageModeValue:
+				// Ensure no private fields exist, as these can't be exposed
+				for _, f := range t.Fields {
+					for _, c := range f.Name {
+						if !unicode.IsUpper(c) {
+							return fmt.Errorf("%w: private field %v in value type %v", ErrAstUnsupported, f.Name, def.Name)
+						}
+
+						break
+					}
+				}
+			default:
+				return fmt.Errorf("%w: unexpected struct usage when validating %v", ErrInternal, def.Usage)
+			}
+		default:
+			return fmt.Errorf("%w: Unexpected type when validating %v", ErrInternal, reflect.TypeOf(def.Type))
 		}
 	}
 

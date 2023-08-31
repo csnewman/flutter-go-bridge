@@ -256,7 +256,7 @@ func (g *generator) processTypeDef(def *parser.TypeDef) error {
 
 		return nil
 	default:
-		return fmt.Errorf("%w: unexpected type %v", ErrUnexpected, reflect.TypeOf(def.Type))
+		return fmt.Errorf("%w: unexpected type def %v", ErrUnexpected, reflect.TypeOf(def.Type))
 	}
 }
 
@@ -287,6 +287,6 @@ func (g *generator) mapType(pt parser.Type) (Type, error) {
 			DartMode:  "map",
 		}, nil
 	default:
-		return Type{}, fmt.Errorf("%w: unexpected type %v", ErrUnexpected, reflect.TypeOf(pt))
+		return Type{}, fmt.Errorf("%w: mapping unexpected type %v: %v", ErrUnexpected, reflect.TypeOf(pt), pt)
 	}
 }
