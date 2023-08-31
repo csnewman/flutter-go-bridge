@@ -19,3 +19,16 @@ jobs:
         uses: pyvista/setup-headless-display-action@v1
       - run: flutter config --enable-linux-desktop
       - run: cd exampleapp && flutter test -d linux --timeout none -v integration_test/
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - run: flutter config --enable-windows-desktop
+      - run: cd exampleapp && flutter test -d windows --timeout none -v integration_test/
