@@ -60,6 +60,9 @@ func parseType(expr ast.Expr) (Type, error) {
 			Name: e.Name,
 		}, nil
 
+	case *ast.SelectorExpr:
+		return nil, fmt.Errorf("%w: type selectors not supported: %v.%v", ErrAstUnsupported, e.X, e.Sel)
+
 	case *ast.StarExpr:
 		inner, err := parseType(e.X)
 		if err != nil {
@@ -115,7 +118,7 @@ func parseType(expr ast.Expr) (Type, error) {
 		}, nil
 
 	default:
-		return nil, fmt.Errorf("%w: unexpected type %v", ErrAstUnexpected, reflect.TypeOf(expr))
+		return nil, fmt.Errorf("%w: unexpected type %v: %v", ErrAstUnexpected, reflect.TypeOf(expr), expr)
 	}
 }
 
