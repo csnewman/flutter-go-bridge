@@ -105,7 +105,12 @@ class _Example1State extends State<Example1> {
               key: const Key('button-add-sync'),
               child: const Text("Add (sync)"),
             ),
-            Text(_addSyncState, key: const Key('value-add-sync')),
+            Expanded(
+              child: Text(
+                _addSyncState,
+                key: const Key('value-add-sync'),
+              ),
+            ),
           ],
         ),
         Row(
@@ -121,7 +126,12 @@ class _Example1State extends State<Example1> {
               key: const Key('button-add-async'),
               child: const Text("Add (async)"),
             ),
-            Text(_addAsyncState, key: const Key('value-add-async')),
+            Expanded(
+              child: Text(
+                _addAsyncState,
+                key: const Key('value-add-async'),
+              ),
+            ),
           ],
         ),
         Row(
@@ -137,7 +147,12 @@ class _Example1State extends State<Example1> {
               key: const Key('button-add-points-sync'),
               child: const Text("AddPoints (sync)"),
             ),
-            Text(_addPointsSyncState, key: const Key('value-add-points-sync')),
+            Expanded(
+              child: Text(
+                _addPointsSyncState,
+                key: const Key('value-add-points-sync'),
+              ),
+            ),
           ],
         ),
         Row(
@@ -155,9 +170,11 @@ class _Example1State extends State<Example1> {
               key: const Key('button-add-points-async'),
               child: const Text("AddPoints (async)"),
             ),
-            Text(
-              _addPointsAsyncState,
-              key: const Key('value-add-points-async'),
+            Expanded(
+              child: Text(
+                _addPointsAsyncState,
+                key: const Key('value-add-points-async'),
+              ),
             ),
           ],
         ),
@@ -177,9 +194,11 @@ class _Example1State extends State<Example1> {
               key: const Key('button-add-errors-sync'),
               child: const Text("AddErrors (sync)"),
             ),
-            Text(
-              _addErrorSyncState,
-              key: const Key('value-add-errors-sync'),
+            Expanded(
+              child: Text(
+                _addErrorSyncState,
+                key: const Key('value-add-errors-sync'),
+              ),
             ),
           ],
         ),
@@ -200,9 +219,11 @@ class _Example1State extends State<Example1> {
               key: const Key('button-add-errors-async'),
               child: const Text("AddError (async)"),
             ),
-            Text(
-              _addErrorAsyncState,
-              key: const Key('value-add-errors-async'),
+            Expanded(
+              child: Text(
+                _addErrorAsyncState,
+                key: const Key('value-add-errors-async'),
+              ),
             ),
           ],
         ),
