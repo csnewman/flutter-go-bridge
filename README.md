@@ -30,6 +30,8 @@ Reuse existing Go libraries in Flutter by calling Go from Dart using auto genera
     - See [Platform building](#platform-building) below.
     - See `exampleapp` for an example.
 
+6. When modifying the Go code, you will likely need to call `flutter clean` to trigger a rebuild.
+
 ### Go wrapper
 
 The bridge does not support all Go constructs and instead relies on a subset. This allows for a more ergonomic wrapper.
@@ -140,6 +142,8 @@ Future<void> structPassingAsync(ExampleStruct val);
 ```
 
 Structs passed in this manner will be passed by `value`, meaning the contents will be copied.
+
+Value structs can not contain private fields.
 
 ### Platform building
 
