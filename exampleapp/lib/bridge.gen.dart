@@ -163,24 +163,24 @@ final class _FfiBridge implements Bridge {
 
   @override
   int add(int a, int b) {
-    var aDart = a;
+    var __Dart__a = a;
     
-    var bDart = b;
+    var __Dart__b = b;
     
-    return _processAdd(_addPtr(aDart, bDart));
+    return _processAdd(_addPtr(__Dart__a, __Dart__b));
   }
 
   @override
   Future<int> addAsync(int a, int b) async {
-    var aDart = a;
+    var __Dart__a = a;
     
-    var bDart = b;
+    var __Dart__b = b;
     
-    var recv = ReceivePort('AsyncRecv(add)');
-    _addPtrAsync(aDart, bDart, recv.sendPort.nativePort);
-    var msg = await recv.first;
-    recv.close();
-    return _processAdd(_addPtrAsyncRes(msg[0]));
+    var __DartRecv__ = ReceivePort('AsyncRecv(add)');
+    _addPtrAsync(__Dart__a, __Dart__b, __DartRecv__.sendPort.nativePort);
+    var __DartMsg__ = await __DartRecv__.first;
+    __DartRecv__.close();
+    return _processAdd(_addPtrAsyncRes(__DartMsg__[0]));
   }
 
   int _processAdd(_FgbRetAdd res) {
@@ -195,24 +195,24 @@ final class _FfiBridge implements Bridge {
   }
   @override
   Point addPoints(Point a, Point b) {
-    var aDart = _mapFromPoint(a);
+    var __Dart__a = _mapFromPoint(a);
     
-    var bDart = _mapFromPoint(b);
+    var __Dart__b = _mapFromPoint(b);
     
-    return _processAddPoints(_addPointsPtr(aDart, bDart));
+    return _processAddPoints(_addPointsPtr(__Dart__a, __Dart__b));
   }
 
   @override
   Future<Point> addPointsAsync(Point a, Point b) async {
-    var aDart = _mapFromPoint(a);
+    var __Dart__a = _mapFromPoint(a);
     
-    var bDart = _mapFromPoint(b);
+    var __Dart__b = _mapFromPoint(b);
     
-    var recv = ReceivePort('AsyncRecv(addPoints)');
-    _addPointsPtrAsync(aDart, bDart, recv.sendPort.nativePort);
-    var msg = await recv.first;
-    recv.close();
-    return _processAddPoints(_addPointsPtrAsyncRes(msg[0]));
+    var __DartRecv__ = ReceivePort('AsyncRecv(addPoints)');
+    _addPointsPtrAsync(__Dart__a, __Dart__b, __DartRecv__.sendPort.nativePort);
+    var __DartMsg__ = await __DartRecv__.first;
+    __DartRecv__.close();
+    return _processAddPoints(_addPointsPtrAsyncRes(__DartMsg__[0]));
   }
 
   Point _processAddPoints(_FgbRetAddPoints res) {
@@ -227,24 +227,24 @@ final class _FfiBridge implements Bridge {
   }
   @override
   int addError(int a, int b) {
-    var aDart = a;
+    var __Dart__a = a;
     
-    var bDart = b;
+    var __Dart__b = b;
     
-    return _processAddError(_addErrorPtr(aDart, bDart));
+    return _processAddError(_addErrorPtr(__Dart__a, __Dart__b));
   }
 
   @override
   Future<int> addErrorAsync(int a, int b) async {
-    var aDart = a;
+    var __Dart__a = a;
     
-    var bDart = b;
+    var __Dart__b = b;
     
-    var recv = ReceivePort('AsyncRecv(addError)');
-    _addErrorPtrAsync(aDart, bDart, recv.sendPort.nativePort);
-    var msg = await recv.first;
-    recv.close();
-    return _processAddError(_addErrorPtrAsyncRes(msg[0]));
+    var __DartRecv__ = ReceivePort('AsyncRecv(addError)');
+    _addErrorPtrAsync(__Dart__a, __Dart__b, __DartRecv__.sendPort.nativePort);
+    var __DartMsg__ = await __DartRecv__.first;
+    __DartRecv__.close();
+    return _processAddError(_addErrorPtrAsyncRes(__DartMsg__[0]));
   }
 
   int _processAddError(_FgbRetAddError res) {

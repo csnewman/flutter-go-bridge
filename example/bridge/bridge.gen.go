@@ -110,7 +110,7 @@ func mapFromPoint(from orig.Point) (res C.fgb_vt_point) {
 }
 
 //export fgb_add
-func fgb_add(a C.int, b C.int) (resw C.fgb_ret_add) {
+func fgb_add(arg_a C.int, arg_b C.int) (resw C.fgb_ret_add) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -121,11 +121,11 @@ func fgb_add(a C.int, b C.int) (resw C.fgb_ret_add) {
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-	
-	aGo := (int)(a)
-	bGo := (int)(b)
-	gres := orig.Add(aGo, bGo)
-	
+
+	arggo_a := (int)(arg_a)
+	arggo_b := (int)(arg_b)
+	gres := orig.Add(arggo_a, arggo_b)
+
 	cres := (C.int)(gres)
 
 	return C.fgb_ret_add{
@@ -134,14 +134,14 @@ func fgb_add(a C.int, b C.int) (resw C.fgb_ret_add) {
 }
 
 //export fgbasync_add
-func fgbasync_add(a C.int, b C.int, fgbPort int64) {
+func fgbasync_add(arg_a C.int, arg_b C.int, fgbPort int64) {
 	go func() {
 		h := atomic.AddUint64(&handleIdx, 1)
 		if h == 0 {
 			panic("ran out of handle space")
 		}
 
-		handles.Store(h, fgb_add(a, b))
+		handles.Store(h, fgb_add(arg_a, arg_b))
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
@@ -165,7 +165,7 @@ func fgbasyncres_add(h uint64) C.fgb_ret_add {
 }
 
 //export fgb_add_points
-func fgb_add_points(a C.fgb_vt_point, b C.fgb_vt_point) (resw C.fgb_ret_add_points) {
+func fgb_add_points(arg_a C.fgb_vt_point, arg_b C.fgb_vt_point) (resw C.fgb_ret_add_points) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -176,11 +176,11 @@ func fgb_add_points(a C.fgb_vt_point, b C.fgb_vt_point) (resw C.fgb_ret_add_poin
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-	
-	aGo := mapToPoint(a)
-	bGo := mapToPoint(b)
-	gres := orig.AddPoints(aGo, bGo)
-	
+
+	arggo_a := mapToPoint(arg_a)
+	arggo_b := mapToPoint(arg_b)
+	gres := orig.AddPoints(arggo_a, arggo_b)
+
 	cres := mapFromPoint(gres)
 
 	return C.fgb_ret_add_points{
@@ -189,14 +189,14 @@ func fgb_add_points(a C.fgb_vt_point, b C.fgb_vt_point) (resw C.fgb_ret_add_poin
 }
 
 //export fgbasync_add_points
-func fgbasync_add_points(a C.fgb_vt_point, b C.fgb_vt_point, fgbPort int64) {
+func fgbasync_add_points(arg_a C.fgb_vt_point, arg_b C.fgb_vt_point, fgbPort int64) {
 	go func() {
 		h := atomic.AddUint64(&handleIdx, 1)
 		if h == 0 {
 			panic("ran out of handle space")
 		}
 
-		handles.Store(h, fgb_add_points(a, b))
+		handles.Store(h, fgb_add_points(arg_a, arg_b))
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
@@ -220,7 +220,7 @@ func fgbasyncres_add_points(h uint64) C.fgb_ret_add_points {
 }
 
 //export fgb_add_error
-func fgb_add_error(a C.int, b C.int) (resw C.fgb_ret_add_error) {
+func fgb_add_error(arg_a C.int, arg_b C.int) (resw C.fgb_ret_add_error) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -231,16 +231,16 @@ func fgb_add_error(a C.int, b C.int) (resw C.fgb_ret_add_error) {
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-	
-	aGo := (int)(a)
-	bGo := (int)(b)
-	gres, gerr := orig.AddError(aGo, bGo)
+
+	arggo_a := (int)(arg_a)
+	arggo_b := (int)(arg_b)
+	gres, gerr := orig.AddError(arggo_a, arggo_b)
 	if gerr != nil {
 		return C.fgb_ret_add_error{
 			err: unsafe.Pointer(C.CString(gerr.Error())),
 		}
 	}
-	
+
 	cres := (C.int)(gres)
 
 	return C.fgb_ret_add_error{
@@ -249,14 +249,14 @@ func fgb_add_error(a C.int, b C.int) (resw C.fgb_ret_add_error) {
 }
 
 //export fgbasync_add_error
-func fgbasync_add_error(a C.int, b C.int, fgbPort int64) {
+func fgbasync_add_error(arg_a C.int, arg_b C.int, fgbPort int64) {
 	go func() {
 		h := atomic.AddUint64(&handleIdx, 1)
 		if h == 0 {
 			panic("ran out of handle space")
 		}
 
-		handles.Store(h, fgb_add_error(a, b))
+		handles.Store(h, fgb_add_error(arg_a, arg_b))
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)

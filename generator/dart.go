@@ -208,15 +208,15 @@ final class _FfiBridge implements Bridge {
   ) {
     {{- range $p := $f.Params}}
     {{- if eq $p.DartMode "direct"}}
-    var {{$p.Name}}Dart = {{$p.Name}};
+    var __Dart__{{$p.Name}} = {{$p.Name}};
     {{- else if eq $p.DartMode "map"}}
-    var {{$p.Name}}Dart = _mapFrom{{$p.MapName}}({{$p.Name}});
+    var __Dart__{{$p.Name}} = _mapFrom{{$p.MapName}}({{$p.Name}});
     {{- else}}
-    var {{$p.Name}}Dart = unknown;
+    var __Dart__{{$p.Name}} = unknown;
     {{- end}}
     {{end}}
     {{if $f.HasRes}}return {{end}}_process{{$f.PascalName}}(_{{$f.CamelName}}Ptr(
-      {{- range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}}Dart{{end -}}
+      {{- range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}__Dart__{{$p.Name}}{{end -}}
     ));
   }
 
@@ -226,20 +226,20 @@ final class _FfiBridge implements Bridge {
   ) async {
     {{- range $p := $f.Params}}
     {{- if eq $p.DartMode "direct"}}
-    var {{$p.Name}}Dart = {{$p.Name}};
+    var __Dart__{{$p.Name}} = {{$p.Name}};
     {{- else if eq $p.DartMode "map"}}
-    var {{$p.Name}}Dart = _mapFrom{{$p.DartType}}({{$p.Name}});
+    var __Dart__{{$p.Name}} = _mapFrom{{$p.DartType}}({{$p.Name}});
     {{- else}}
-    var {{$p.Name}}Dart = unknown;
+    var __Dart__{{$p.Name}} = unknown;
     {{- end}}
     {{end}}
-    var recv = ReceivePort('AsyncRecv({{$f.CamelName}})');
+    var __DartRecv__ = ReceivePort('AsyncRecv({{$f.CamelName}})');
     _{{$f.CamelName}}PtrAsync(
-      {{- range $p := $f.Params}}{{$p.Name}}Dart, {{end -}}
-    recv.sendPort.nativePort);
-    var msg = await recv.first;
-    recv.close();
-    {{if $f.HasRes}}return {{end}}_process{{$f.PascalName}}(_{{$f.CamelName}}PtrAsyncRes(msg[0]));
+      {{- range $p := $f.Params}}__Dart__{{$p.Name}}, {{end -}}
+    __DartRecv__.sendPort.nativePort);
+    var __DartMsg__ = await __DartRecv__.first;
+    __DartRecv__.close();
+    {{if $f.HasRes}}return {{end}}_process{{$f.PascalName}}(_{{$f.CamelName}}PtrAsyncRes(__DartMsg__[0]));
   }
 
   {{if $f.HasRes}}{{$f.Res.DartType}}{{else}}void{{end}} _process{{$f.PascalName}}(_FgbRet{{$f.PascalName}} res) {

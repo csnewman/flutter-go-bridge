@@ -133,7 +133,7 @@ func mapFrom{{$s.PascalName}}(from orig.{{$s.OrigName}}) (res C.fgb_vt_{{$s.Snak
 {{- end}}
 {{range $f := $top.Functions}}
 //export fgb_{{$f.SnakeName}}
-func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}} C.{{$p.CType}}{{end}}) (resw C.fgb_ret_{{$f.SnakeName}}) {
+func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}arg_{{$p.Name}} C.{{$p.CType}}{{end}}) (resw C.fgb_ret_{{$f.SnakeName}}) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -146,17 +146,17 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{
 	}()
 	{{range $i, $p := $f.Params}}
 	{{- if eq $p.GoMode "cast"}}
-	{{$p.Name}}Go := ({{$p.GoType}})({{$p.Name}})
+	arggo_{{$p.Name}} := ({{$p.GoType}})(arg_{{$p.Name}})
 	{{- else if eq $p.GoMode "map"}}
-	{{$p.Name}}Go := mapTo{{$p.MapName}}({{$p.Name}})
+	arggo_{{$p.Name}} := mapTo{{$p.MapName}}(arg_{{$p.Name}})
 	{{- else}}
-	{{$p.Name}}Go := unknown
+	arggo_{{$p.Name}} := unknown
 	{{- end}}
 	{{- end}}
 	{{if $f.HasRes}}gres{{if $f.HasErr}}, {{end}}{{end}}{{if $f.HasErr}}gerr{{end -}}
 	{{if or $f.HasRes $f.HasErr}} := {{end -}}
 	orig.{{$f.TgtName}}({{range $i, $p := $f.Params}}
-		{{- if gt $i 0}}, {{end}}{{$p.Name}}Go
+		{{- if gt $i 0}}, {{end}}arggo_{{$p.Name}}
 	{{- end}})
 	{{- if $f.HasErr}}
 	if gerr != nil {
@@ -183,14 +183,14 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{
 }
 
 //export fgbasync_{{$f.SnakeName}}
-func fgbasync_{{$f.SnakeName}}({{range $p := $f.Params}}{{$p.Name}} C.{{$p.CType}}, {{end}}fgbPort int64) {
+func fgbasync_{{$f.SnakeName}}({{range $p := $f.Params}}arg_{{$p.Name}} C.{{$p.CType}}, {{end}}fgbPort int64) {
 	go func() {
 		h := atomic.AddUint64(&handleIdx, 1)
 		if h == 0 {
 			panic("ran out of handle space")
 		}
 
-		handles.Store(h, fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}{{$p.Name}}{{end}}))
+		handles.Store(h, fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}arg_{{$p.Name}}{{end}}))
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
 			handles.LoadAndDelete(h)
