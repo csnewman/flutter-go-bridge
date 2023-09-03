@@ -42,6 +42,22 @@ abstract interface class Bridge {
   );
 {{end -}}
 }
+{{- range $s := $top.RefStructs}}
+
+abstract interface class {{$s.PascalName}} {
+}
+
+final class _Ffi{{$s.PascalName}} implements {{$s.PascalName}}, ffi.Finalizable {
+  final ffi.Pointer<ffi.Void> id;
+
+  _Ffi{{$s.PascalName}}(this.id);
+
+  @override
+  String toString() {
+    return '{{$s.PascalName}}(${id.address})';
+  }
+}
+{{- end}}
 {{- range $s := $top.ValueStructs}}
 
 final class {{$s.PascalName}} {
@@ -86,6 +102,8 @@ typedef _FgbDefIntCAlloc = ffi.Pointer Function(ffi.IntPtr);
 typedef _FgbDefIntDartAlloc = ffi.Pointer Function(int);
 typedef _FgbDefIntCFree = ffi.Void Function(ffi.Pointer);
 typedef _FgbDefIntDartFree = void Function(ffi.Pointer);
+typedef _NativeFinalizerFunctionC = ffi.Void Function(ffi.Pointer<ffi.Void>);
+typedef _NativeFinalizerFunctionDart = void Function(ffi.Pointer<ffi.Void>);
 
 class _GoAllocator implements ffi.Allocator {
   final _FgbDefIntDartAlloc _allocPtr;
@@ -178,6 +196,11 @@ final class _FfiBridge implements Bridge {
   late _FgbEmpty{{$s.PascalName}} _empty{{$s.PascalName}}Ptr;
 {{- end}}
 
+{{- range $s := $top.RefStructs}}
+  late ffi.Pointer<ffi.NativeFinalizerFunction> _free{{$s.PascalName}}Ptr;
+  late ffi.NativeFinalizer _{{$s.CamelName}}Finalizer;
+{{- end}}
+
   _FfiBridge(ffi.DynamicLibrary lib) {
     var allocPtr = lib.lookupFunction<_FgbDefIntCAlloc, _FgbDefIntDartAlloc>("fgbinternal_alloc");
     var freePtr = lib.lookupFunction<_FgbDefIntCFree, _FgbDefIntDartFree>("fgbinternal_free");
@@ -199,6 +222,10 @@ final class _FfiBridge implements Bridge {
 {{- end}}
 {{range $s := $top.ValueStructs}}
     _empty{{$s.PascalName}}Ptr = lib.lookupFunction<_FgbEmpty{{$s.PascalName}}, _FgbEmpty{{$s.PascalName}}>("fgbempty_{{$s.SnakeName}}");
+{{- end}}
+{{range $s := $top.RefStructs}}
+    _free{{$s.PascalName}}Ptr = lib.lookup<ffi.NativeFinalizerFunction>("fgbfree_{{$s.SnakeName}}");
+    _{{$s.CamelName}}Finalizer = ffi.NativeFinalizer(_free{{$s.PascalName}}Ptr);
 {{- end}}
   }
 {{range $f := $top.Functions}}
@@ -291,6 +318,22 @@ final class _FfiBridge implements Bridge {
     {{- end}}
     {{- end}}
     return res;
+  }
+{{- end}}
+{{- range $s := $top.RefStructs}}
+
+  {{$s.PascalName}} _mapTo{{$s.PascalName}}(ffi.Pointer<ffi.Void> from) {
+    var res = _Ffi{{$s.PascalName}}(from);
+    _{{$s.CamelName}}Finalizer.attach(res, from);
+    return res;
+  }
+
+  ffi.Pointer<ffi.Void> _mapFrom{{$s.PascalName}}({{$s.PascalName}} from) {
+    if (from is! _Ffi{{$s.PascalName}}) {
+      throw 'Mismatched reference struct instance type';
+    }
+
+    return from.id;
   }
 {{- end}}
 

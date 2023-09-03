@@ -169,7 +169,7 @@ func (p *parser) validate() error {
 	log.Println("Validating")
 
 	for _, def := range p.Types {
-		log.Println(" - Type ", def.Name)
+		log.Println(" - Type", def.Name)
 
 		switch t := def.Type.(type) {
 		case *StructType:
@@ -187,6 +187,8 @@ func (p *parser) validate() error {
 						break
 					}
 				}
+			case UsageModeRef:
+				// No validation
 			default:
 				return fmt.Errorf("%w: unexpected struct usage when validating %v", ErrInternal, def.Usage)
 			}

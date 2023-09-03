@@ -19,6 +19,7 @@ var (
 type Unit struct {
 	TgtPkg       string
 	ValueStructs []*ValueStruct
+	RefStructs   []*RefStruct
 	Functions    []*Func
 }
 
@@ -30,9 +31,17 @@ type ValueStruct struct {
 	Fields     []*Field
 }
 
+type RefStruct struct {
+	OrigName   string
+	SnakeName  string
+	CamelName  string
+	PascalName string
+}
+
 type Type struct {
 	CType     string
 	GoType    string
+	GoCType   string
 	GoMode    string
 	MapName   string
 	DartCType string
@@ -196,19 +205,19 @@ func (g *generator) processFunc(f *parser.FuncDef) error {
 }
 
 var inbuiltTypes = map[string]Type{
-	"error":  {CType: "void*", GoType: "error", GoMode: "map", MapName: "Error", DartCType: "ffi.Pointer<ffi.Void>", DartType: "String", DartMode: "map"},
-	"string": {CType: "void*", GoType: "string", GoMode: "map", MapName: "String", DartCType: "ffi.Pointer<ffi.Void>", DartType: "String", DartMode: "map"},
-	"int8":   {CType: "int8", GoType: "int8", GoMode: "cast", DartCType: "ffi.Int8", DartType: "int", DartMode: "direct"},
-	"uint8":  {CType: "uint8", GoType: "uint8", GoMode: "cast", DartCType: "ffi.Uint8", DartType: "int", DartMode: "direct"},
-	"byte":   {CType: "byte", GoType: "byte", GoMode: "cast", DartCType: "ffi.Byte", DartType: "int", DartMode: "direct"},
-	"int16":  {CType: "int16", GoType: "int16", GoMode: "cast", DartCType: "ffi.Int16", DartType: "int", DartMode: "direct"},
-	"uint16": {CType: "uint16", GoType: "uint16", GoMode: "cast", DartCType: "ffi.Uint16", DartType: "int", DartMode: "direct"},
-	"int32":  {CType: "int32", GoType: "int32", GoMode: "cast", DartCType: "ffi.Int32", DartType: "int", DartMode: "direct"},
-	"uint32": {CType: "uint32", GoType: "uint32", GoMode: "cast", DartCType: "ffi.Uint32", DartType: "int", DartMode: "direct"},
-	"int64":  {CType: "int64", GoType: "int64", GoMode: "cast", DartCType: "ffi.Int64", DartType: "int", DartMode: "direct"},
-	"uint64": {CType: "uint64", GoType: "uint64", GoMode: "cast", DartCType: "ffi.Uint64", DartType: "int", DartMode: "direct"},
-	"int":    {CType: "int", GoType: "int", GoMode: "cast", DartCType: "ffi.Int", DartType: "int", DartMode: "direct"},
-	"uint":   {CType: "uint", GoType: "uint", GoMode: "cast", DartCType: "ffi.Uint", DartType: "int", DartMode: "direct"},
+	"error":  {CType: "void*", GoType: "error", GoCType: "unsafe.Pointer", GoMode: "map", MapName: "Error", DartCType: "ffi.Pointer<ffi.Void>", DartType: "String", DartMode: "map"},
+	"string": {CType: "void*", GoType: "string", GoCType: "unsafe.Pointer", GoMode: "map", MapName: "String", DartCType: "ffi.Pointer<ffi.Void>", DartType: "String", DartMode: "map"},
+	"int8":   {CType: "int8_t", GoType: "int8", GoCType: "C.int8_t", GoMode: "cast", DartCType: "ffi.Int8", DartType: "int", DartMode: "direct"},
+	"uint8":  {CType: "uint8_t", GoType: "uint8", GoCType: "C.uint8_t", GoMode: "cast", DartCType: "ffi.Uint8", DartType: "int", DartMode: "direct"},
+	"byte":   {CType: "byte", GoType: "byte", GoCType: "C.byte", GoMode: "cast", DartCType: "ffi.Byte", DartType: "int", DartMode: "direct"},
+	"int16":  {CType: "int16_t", GoType: "int16", GoCType: "C.int16_t", GoMode: "cast", DartCType: "ffi.Int16", DartType: "int", DartMode: "direct"},
+	"uint16": {CType: "uint16_t", GoType: "uint16", GoCType: "C.uint16_t", GoMode: "cast", DartCType: "ffi.Uint16", DartType: "int", DartMode: "direct"},
+	"int32":  {CType: "int32_t", GoType: "int32", GoCType: "C.int32_t", GoMode: "cast", DartCType: "ffi.Int32", DartType: "int", DartMode: "direct"},
+	"uint32": {CType: "uint32_t", GoType: "uint32", GoCType: "C.uint32_t", GoMode: "cast", DartCType: "ffi.Uint32", DartType: "int", DartMode: "direct"},
+	"int64":  {CType: "int64_t", GoType: "int64", GoCType: "C.int64_t", GoMode: "cast", DartCType: "ffi.Int64", DartType: "int", DartMode: "direct"},
+	"uint64": {CType: "uint64_t", GoType: "uint64", GoCType: "C.uint64_t", GoMode: "cast", DartCType: "ffi.Uint64", DartType: "int", DartMode: "direct"},
+	"int":    {CType: "int", GoType: "int", GoCType: "C.int", GoMode: "cast", DartCType: "ffi.Int", DartType: "int", DartMode: "direct"},
+	"uint":   {CType: "uint", GoType: "uint", GoCType: "C.uint", GoMode: "cast", DartCType: "ffi.Uint", DartType: "int", DartMode: "direct"},
 }
 
 func (g *generator) processTypeDef(def *parser.TypeDef) error {
@@ -218,46 +227,63 @@ func (g *generator) processTypeDef(def *parser.TypeDef) error {
 	case *parser.PointerType:
 		return fmt.Errorf("%w: aliases not supported", ErrUnsupported)
 	case *parser.StructType:
-		if def.Usage == parser.UsageModeNone {
+		switch def.Usage {
+		case parser.UsageModeNone:
 			log.Println("   - Type not used")
-
 			return nil
-		} else if def.Usage == parser.UsageModeRef {
+		case parser.UsageModeValue:
+			log.Println("   - Type used as value")
+			return g.processValueStruct(def, t)
+		case parser.UsageModeRef:
 			log.Println("   - Type used as ref")
-
-			return nil
+			return g.processRefStruct(def, t)
+		default:
+			return fmt.Errorf("%w: unexpected struct usage %v", ErrUnexpected, def.Usage)
 		}
-
-		log.Println("   - Type used as value")
-
-		vt := &ValueStruct{
-			OrigName:   def.Name,
-			SnakeName:  strcase.ToSnake(def.Name),
-			PascalName: strcase.ToCamel(def.Name),
-			CamelName:  strcase.ToLowerCamel(def.Name),
-		}
-
-		for _, f := range t.Fields {
-			mt, err := g.mapType(f.Type)
-			if err != nil {
-				return err
-			}
-
-			vt.Fields = append(vt.Fields, &Field{
-				Type:       mt,
-				OrigName:   f.Name,
-				SnakeName:  strcase.ToSnake(f.Name),
-				PascalName: strcase.ToCamel(f.Name),
-				CamelName:  strcase.ToLowerCamel(f.Name),
-			})
-		}
-
-		g.unit.ValueStructs = append(g.unit.ValueStructs, vt)
-
-		return nil
 	default:
 		return fmt.Errorf("%w: unexpected type def %v", ErrUnexpected, reflect.TypeOf(def.Type))
 	}
+}
+
+func (g *generator) processValueStruct(def *parser.TypeDef, t *parser.StructType) error {
+	vt := &ValueStruct{
+		OrigName:   def.Name,
+		SnakeName:  strcase.ToSnake(def.Name),
+		PascalName: strcase.ToCamel(def.Name),
+		CamelName:  strcase.ToLowerCamel(def.Name),
+	}
+
+	for _, f := range t.Fields {
+		mt, err := g.mapType(f.Type)
+		if err != nil {
+			return err
+		}
+
+		vt.Fields = append(vt.Fields, &Field{
+			Type:       mt,
+			OrigName:   f.Name,
+			SnakeName:  strcase.ToSnake(f.Name),
+			PascalName: strcase.ToCamel(f.Name),
+			CamelName:  strcase.ToLowerCamel(f.Name),
+		})
+	}
+
+	g.unit.ValueStructs = append(g.unit.ValueStructs, vt)
+
+	return nil
+}
+
+func (g *generator) processRefStruct(def *parser.TypeDef, t *parser.StructType) error {
+	rt := &RefStruct{
+		OrigName:   def.Name,
+		SnakeName:  strcase.ToSnake(def.Name),
+		PascalName: strcase.ToCamel(def.Name),
+		CamelName:  strcase.ToLowerCamel(def.Name),
+	}
+
+	g.unit.RefStructs = append(g.unit.RefStructs, rt)
+
+	return nil
 }
 
 func (g *generator) mapType(pt parser.Type) (Type, error) {
@@ -280,10 +306,40 @@ func (g *generator) mapType(pt parser.Type) (Type, error) {
 		return Type{
 			CType:     "fgb_vt_" + strcase.ToSnake(t.Name),
 			GoType:    "orig." + t.Name,
+			GoCType:   "C.fgb_vt_" + strcase.ToSnake(t.Name),
 			GoMode:    "map",
 			MapName:   strcase.ToCamel(t.Name),
 			DartCType: "_FgbC" + strcase.ToCamel(t.Name),
 			DartType:  strcase.ToCamel(t.Name),
+			DartMode:  "map",
+		}, nil
+	case *parser.PointerType:
+		ident, ok := t.Inner.(*parser.IdentType)
+		if !ok {
+			return Type{}, fmt.Errorf("%w: pointer to %v (%v) is not supported", ErrUnsupported, t.Inner, reflect.TypeOf(t.Inner))
+		}
+
+		if _, ok := inbuiltTypes[ident.Name]; ok {
+			return Type{}, fmt.Errorf("%w: pointer to primitive %v is not supported", ErrUnsupported, ident.Name)
+		}
+
+		def, ok := g.pkg.Types[ident.Name]
+		if !ok {
+			return Type{}, fmt.Errorf("%w: type is not defined: %v", ErrUnexpected, ident.Name)
+		}
+
+		if def.Usage != parser.UsageModeRef {
+			return Type{}, fmt.Errorf("%w: pointer type has unexpected usage %v", ErrUnexpected, def.Usage)
+		}
+
+		return Type{
+			CType:     "void*",
+			GoType:    "*orig." + ident.Name,
+			GoCType:   "unsafe.Pointer",
+			GoMode:    "map",
+			MapName:   strcase.ToCamel(ident.Name),
+			DartCType: "ffi.Pointer<ffi.Void>",
+			DartType:  strcase.ToCamel(ident.Name),
 			DartMode:  "map",
 		}, nil
 	default:

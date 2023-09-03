@@ -131,9 +131,41 @@ func mapFrom{{$s.PascalName}}(from orig.{{$s.OrigName}}) (res C.fgb_vt_{{$s.Snak
 	return
 }
 {{- end}}
+{{- range $s := $top.RefStructs}}
+
+func mapTo{{$s.PascalName}}(from unsafe.Pointer) *orig.{{$s.OrigName}} {
+{{- /* TODO: Add special 32bit handling */}}
+	h := uint64(uintptr(from))
+
+	v, ok := handles.Load(h)
+	if !ok {
+		panic(fmt.Sprintf("invalid handle: %v", h))
+	}
+
+	return v.(*orig.{{$s.OrigName}})
+}
+
+func mapFrom{{$s.PascalName}}(from *orig.{{$s.OrigName}}) unsafe.Pointer {
+	h := atomic.AddUint64(&handleIdx, 1)
+	if h == 0 {
+		panic("ran out of handle space")
+	}
+
+	handles.Store(h, from)
+
+	return unsafe.Pointer(uintptr(h))
+}
+
+//export fgbfree_{{$s.SnakeName}}
+func fgbfree_{{$s.SnakeName}}(from unsafe.Pointer) {
+	h := uint64(uintptr(from))
+
+	handles.Delete(h)
+}
+{{- end}}
 {{range $f := $top.Functions}}
 //export fgb_{{$f.SnakeName}}
-func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}arg_{{$p.Name}} C.{{$p.CType}}{{end}}) (resw C.fgb_ret_{{$f.SnakeName}}) {
+func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}arg_{{$p.Name}} {{$p.GoCType}}{{end}}) (resw C.fgb_ret_{{$f.SnakeName}}) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -167,7 +199,7 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}ar
 	{{- end}}
 	{{if $f.HasRes}}
 	{{- if eq $f.Res.GoMode "cast"}}
-	cres := (C.{{$f.Res.CType}})(gres)
+	cres := ({{$f.Res.GoCType}})(gres)
 	{{- else if eq $f.Res.GoMode "map"}}
 	cres := mapFrom{{$f.Res.MapName}}(gres)
 	{{- else}}
@@ -183,7 +215,7 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}ar
 }
 
 //export fgbasync_{{$f.SnakeName}}
-func fgbasync_{{$f.SnakeName}}({{range $p := $f.Params}}arg_{{$p.Name}} C.{{$p.CType}}, {{end}}fgbPort int64) {
+func fgbasync_{{$f.SnakeName}}({{range $p := $f.Params}}arg_{{$p.Name}} {{$p.GoCType}}, {{end}}fgbPort int64) {
 	go func() {
 		h := atomic.AddUint64(&handleIdx, 1)
 		if h == 0 {
