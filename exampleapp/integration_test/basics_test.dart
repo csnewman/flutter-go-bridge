@@ -1,6 +1,5 @@
 import 'package:exampleapp/main.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -38,10 +37,22 @@ List<Map<String, String>> basicTests = [
     "result": "error=BridgeException: add res was 2",
   },
   {
-    "name": "add async",
+    "name": "add errors async",
     "elem-text": "value-add-errors-async",
     "elem-button": "button-add-errors-async",
     "result": "error=BridgeException: add res was 4",
+  },
+  {
+    "name": "obj sync",
+    "elem-text": "value-obj-sync",
+    "elem-button": "button-obj-sync",
+    "result": "Obj: Name=test1 Other=200",
+  },
+  {
+    "name": "obj async",
+    "elem-text": "value-obj-async",
+    "elem-button": "button-obj-async",
+    "result": "Obj: Name=test2 Other=246",
   },
 ];
 

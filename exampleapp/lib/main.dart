@@ -88,6 +88,8 @@ class _Example1State extends State<Example1> {
   String _addPointsAsyncState = 'not called';
   String _addErrorSyncState = 'not called';
   String _addErrorAsyncState = 'not called';
+  String _objSyncState = 'not called';
+  String _objAsyncState = 'not called';
 
   @override
   Widget build(BuildContext context) {
@@ -223,6 +225,55 @@ class _Example1State extends State<Example1> {
               child: Text(
                 _addErrorAsyncState,
                 key: const Key('value-add-errors-async'),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  var b = getBridge();
+                  var o = b.newObj("test1", 100);
+                  b.modifyObj(o);
+                  _objSyncState = b.formatObj(o);
+                });
+              },
+              key: const Key('button-obj-sync'),
+              child: const Text("AddErrors (sync)"),
+            ),
+            Expanded(
+              child: Text(
+                _objSyncState,
+                key: const Key('value-obj-sync'),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            OutlinedButton(
+              onPressed: () {
+                getBridge().newObjAsync("test2", 123).then(
+                      (o) => {
+                        getBridge().modifyObjAsync(o).then((_) => {
+                              getBridge().formatObjAsync(o).then((value) => {
+                                    setState(() {
+                                      _objAsyncState = value;
+                                    })
+                                  }),
+                            }),
+                      },
+                    );
+              },
+              key: const Key('button-obj-async'),
+              child: const Text("AddError (async)"),
+            ),
+            Expanded(
+              child: Text(
+                _objAsyncState,
+                key: const Key('value-obj-async'),
               ),
             ),
           ],

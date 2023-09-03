@@ -30,6 +30,32 @@ abstract interface class Bridge {
   int addError(int a, int b);
 
   Future<int> addErrorAsync(int a, int b);
+
+  Obj newObj(String name, int other);
+
+  Future<Obj> newObjAsync(String name, int other);
+
+  void modifyObj(Obj o);
+
+  Future<void> modifyObjAsync(Obj o);
+
+  String formatObj(Obj o);
+
+  Future<String> formatObjAsync(Obj o);
+}
+
+abstract interface class Obj {
+}
+
+final class _FfiObj implements Obj, ffi.Finalizable {
+  final ffi.Pointer<ffi.Void> id;
+
+  _FfiObj(this.id);
+
+  @override
+  String toString() {
+    return 'Obj(${id.address})';
+  }
 }
 
 final class Point {
@@ -60,6 +86,8 @@ typedef _FgbDefIntCAlloc = ffi.Pointer Function(ffi.IntPtr);
 typedef _FgbDefIntDartAlloc = ffi.Pointer Function(int);
 typedef _FgbDefIntCFree = ffi.Void Function(ffi.Pointer);
 typedef _FgbDefIntDartFree = void Function(ffi.Pointer);
+typedef _NativeFinalizerFunctionC = ffi.Void Function(ffi.Pointer<ffi.Void>);
+typedef _NativeFinalizerFunctionDart = void Function(ffi.Pointer<ffi.Void>);
 
 class _GoAllocator implements ffi.Allocator {
   final _FgbDefIntDartAlloc _allocPtr;
@@ -120,6 +148,41 @@ typedef _FgbAsyncDefCAddError = ffi.Void Function(ffi.Int, ffi.Int, ffi.Uint64);
 typedef _FgbAsyncResDefDartAddError = _FgbRetAddError Function(int);
 typedef _FgbAsyncResDefCAddError = _FgbRetAddError Function(ffi.Uint64);
 
+final class _FgbRetNewObj extends ffi.Struct {
+  external ffi.Pointer<ffi.Void> res;
+  external ffi.Pointer<ffi.Void> err;
+}
+
+typedef _FgbDefDartNewObj = _FgbRetNewObj Function(ffi.Pointer<ffi.Void>, int);
+typedef _FgbDefCNewObj = _FgbRetNewObj Function(ffi.Pointer<ffi.Void>, ffi.Int);
+typedef _FgbAsyncDefDartNewObj = void Function(ffi.Pointer<ffi.Void>, int, int);
+typedef _FgbAsyncDefCNewObj = ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Int, ffi.Uint64);
+typedef _FgbAsyncResDefDartNewObj = _FgbRetNewObj Function(int);
+typedef _FgbAsyncResDefCNewObj = _FgbRetNewObj Function(ffi.Uint64);
+
+final class _FgbRetModifyObj extends ffi.Struct {
+  external ffi.Pointer<ffi.Void> err;
+}
+
+typedef _FgbDefDartModifyObj = _FgbRetModifyObj Function(ffi.Pointer<ffi.Void>);
+typedef _FgbDefCModifyObj = _FgbRetModifyObj Function(ffi.Pointer<ffi.Void>);
+typedef _FgbAsyncDefDartModifyObj = void Function(ffi.Pointer<ffi.Void>, int);
+typedef _FgbAsyncDefCModifyObj = ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint64);
+typedef _FgbAsyncResDefDartModifyObj = _FgbRetModifyObj Function(int);
+typedef _FgbAsyncResDefCModifyObj = _FgbRetModifyObj Function(ffi.Uint64);
+
+final class _FgbRetFormatObj extends ffi.Struct {
+  external ffi.Pointer<ffi.Void> res;
+  external ffi.Pointer<ffi.Void> err;
+}
+
+typedef _FgbDefDartFormatObj = _FgbRetFormatObj Function(ffi.Pointer<ffi.Void>);
+typedef _FgbDefCFormatObj = _FgbRetFormatObj Function(ffi.Pointer<ffi.Void>);
+typedef _FgbAsyncDefDartFormatObj = void Function(ffi.Pointer<ffi.Void>, int);
+typedef _FgbAsyncDefCFormatObj = ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint64);
+typedef _FgbAsyncResDefDartFormatObj = _FgbRetFormatObj Function(int);
+typedef _FgbAsyncResDefCFormatObj = _FgbRetFormatObj Function(ffi.Uint64);
+
 final class _FfiBridge implements Bridge {
   late _GoAllocator _allocator;
   late _FgbDefDartAdd _addPtr;
@@ -131,7 +194,18 @@ final class _FfiBridge implements Bridge {
   late _FgbDefDartAddError _addErrorPtr;
   late _FgbAsyncDefDartAddError _addErrorPtrAsync;
   late _FgbAsyncResDefDartAddError _addErrorPtrAsyncRes;
+  late _FgbDefDartNewObj _newObjPtr;
+  late _FgbAsyncDefDartNewObj _newObjPtrAsync;
+  late _FgbAsyncResDefDartNewObj _newObjPtrAsyncRes;
+  late _FgbDefDartModifyObj _modifyObjPtr;
+  late _FgbAsyncDefDartModifyObj _modifyObjPtrAsync;
+  late _FgbAsyncResDefDartModifyObj _modifyObjPtrAsyncRes;
+  late _FgbDefDartFormatObj _formatObjPtr;
+  late _FgbAsyncDefDartFormatObj _formatObjPtrAsync;
+  late _FgbAsyncResDefDartFormatObj _formatObjPtrAsyncRes;
   late _FgbEmptyPoint _emptyPointPtr;
+  late ffi.Pointer<ffi.NativeFinalizerFunction> _freeObjPtr;
+  late ffi.NativeFinalizer _objFinalizer;
 
   _FfiBridge(ffi.DynamicLibrary lib) {
     var allocPtr = lib.lookupFunction<_FgbDefIntCAlloc, _FgbDefIntDartAlloc>("fgbinternal_alloc");
@@ -157,8 +231,20 @@ final class _FfiBridge implements Bridge {
     _addErrorPtr = lib.lookupFunction<_FgbDefCAddError, _FgbDefDartAddError>("fgb_add_error");
     _addErrorPtrAsync = lib.lookupFunction<_FgbAsyncDefCAddError, _FgbAsyncDefDartAddError>("fgbasync_add_error");
     _addErrorPtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCAddError, _FgbAsyncResDefDartAddError>("fgbasyncres_add_error");
+    _newObjPtr = lib.lookupFunction<_FgbDefCNewObj, _FgbDefDartNewObj>("fgb_new_obj");
+    _newObjPtrAsync = lib.lookupFunction<_FgbAsyncDefCNewObj, _FgbAsyncDefDartNewObj>("fgbasync_new_obj");
+    _newObjPtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCNewObj, _FgbAsyncResDefDartNewObj>("fgbasyncres_new_obj");
+    _modifyObjPtr = lib.lookupFunction<_FgbDefCModifyObj, _FgbDefDartModifyObj>("fgb_modify_obj");
+    _modifyObjPtrAsync = lib.lookupFunction<_FgbAsyncDefCModifyObj, _FgbAsyncDefDartModifyObj>("fgbasync_modify_obj");
+    _modifyObjPtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCModifyObj, _FgbAsyncResDefDartModifyObj>("fgbasyncres_modify_obj");
+    _formatObjPtr = lib.lookupFunction<_FgbDefCFormatObj, _FgbDefDartFormatObj>("fgb_format_obj");
+    _formatObjPtrAsync = lib.lookupFunction<_FgbAsyncDefCFormatObj, _FgbAsyncDefDartFormatObj>("fgbasync_format_obj");
+    _formatObjPtrAsyncRes = lib.lookupFunction<_FgbAsyncResDefCFormatObj, _FgbAsyncResDefDartFormatObj>("fgbasyncres_format_obj");
 
     _emptyPointPtr = lib.lookupFunction<_FgbEmptyPoint, _FgbEmptyPoint>("fgbempty_point");
+
+    _freeObjPtr = lib.lookup<ffi.NativeFinalizerFunction>("fgbfree_obj");
+    _objFinalizer = ffi.NativeFinalizer(_freeObjPtr);
   }
 
   @override
@@ -257,6 +343,93 @@ final class _FfiBridge implements Bridge {
     }
     return res.res;
   }
+  @override
+  Obj newObj(String name, int other) {
+    var __Dart__name = _mapFromString(name);
+    
+    var __Dart__other = other;
+    
+    return _processNewObj(_newObjPtr(__Dart__name, __Dart__other));
+  }
+
+  @override
+  Future<Obj> newObjAsync(String name, int other) async {
+    var __Dart__name = _mapFromString(name);
+    
+    var __Dart__other = other;
+    
+    var __DartRecv__ = ReceivePort('AsyncRecv(newObj)');
+    _newObjPtrAsync(__Dart__name, __Dart__other, __DartRecv__.sendPort.nativePort);
+    var __DartMsg__ = await __DartRecv__.first;
+    __DartRecv__.close();
+    return _processNewObj(_newObjPtrAsyncRes(__DartMsg__[0]));
+  }
+
+  Obj _processNewObj(_FgbRetNewObj res) {
+    if (res.err != ffi.nullptr) {
+      var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
+      var errMsg = errPtr.toDartString(); 
+      _allocator.free(errPtr);
+
+      throw BridgeException(errMsg);
+    }
+    return _mapToObj(res.res);
+  }
+  @override
+  void modifyObj(Obj o) {
+    var __Dart__o = _mapFromObj(o);
+    
+    _processModifyObj(_modifyObjPtr(__Dart__o));
+  }
+
+  @override
+  Future<void> modifyObjAsync(Obj o) async {
+    var __Dart__o = _mapFromObj(o);
+    
+    var __DartRecv__ = ReceivePort('AsyncRecv(modifyObj)');
+    _modifyObjPtrAsync(__Dart__o, __DartRecv__.sendPort.nativePort);
+    var __DartMsg__ = await __DartRecv__.first;
+    __DartRecv__.close();
+    _processModifyObj(_modifyObjPtrAsyncRes(__DartMsg__[0]));
+  }
+
+  void _processModifyObj(_FgbRetModifyObj res) {
+    if (res.err != ffi.nullptr) {
+      var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
+      var errMsg = errPtr.toDartString(); 
+      _allocator.free(errPtr);
+
+      throw BridgeException(errMsg);
+    }
+  }
+  @override
+  String formatObj(Obj o) {
+    var __Dart__o = _mapFromObj(o);
+    
+    return _processFormatObj(_formatObjPtr(__Dart__o));
+  }
+
+  @override
+  Future<String> formatObjAsync(Obj o) async {
+    var __Dart__o = _mapFromObj(o);
+    
+    var __DartRecv__ = ReceivePort('AsyncRecv(formatObj)');
+    _formatObjPtrAsync(__Dart__o, __DartRecv__.sendPort.nativePort);
+    var __DartMsg__ = await __DartRecv__.first;
+    __DartRecv__.close();
+    return _processFormatObj(_formatObjPtrAsyncRes(__DartMsg__[0]));
+  }
+
+  String _processFormatObj(_FgbRetFormatObj res) {
+    if (res.err != ffi.nullptr) {
+      var errPtr = ffi.Pointer<Utf8>.fromAddress(res.err.address);
+      var errMsg = errPtr.toDartString(); 
+      _allocator.free(errPtr);
+
+      throw BridgeException(errMsg);
+    }
+    return _mapToString(res.res);
+  }
 
   Point _mapToPoint(_FgbCPoint from) {
     return Point(from.x, from.y, _mapToString(from.name));
@@ -268,6 +441,20 @@ final class _FfiBridge implements Bridge {
     res.y = from.y;
     res.name = _mapFromString(from.name);
     return res;
+  }
+
+  Obj _mapToObj(ffi.Pointer<ffi.Void> from) {
+    var res = _FfiObj(from);
+    _objFinalizer.attach(res, from);
+    return res;
+  }
+
+  ffi.Pointer<ffi.Void> _mapFromObj(Obj from) {
+    if (from is! _FfiObj) {
+      throw 'Mismatched reference struct instance type';
+    }
+
+    return from.id;
   }
 
   String _mapToString(ffi.Pointer<ffi.Void> from) {
