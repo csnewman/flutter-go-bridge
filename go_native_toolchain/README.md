@@ -1,0 +1,1 @@
+A library to invoke the native Go compiler installed on the host machine.
