@@ -74,9 +74,6 @@ apply_standard_settings(${BINARY_NAME})
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)
 target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
 
-
-#target_link_libraries(${BINARY_NAME} PRIVATE /home/csnewman/Projects/flutter-go-bridge/lib.a)
-
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
 
@@ -94,10 +91,6 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
-# go-flutter-bridge
-add_subdirectory(../golib gobuild)
-add_dependencies(${BINARY_NAME} libexample)
-list(APPEND PLUGIN_BUNDLED_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/gobuild/libexample.so)
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build
@@ -129,6 +122,12 @@ foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endforeach(bundled_library)
+
+# Copy the native assets provided by the build.dart from all packages.
+set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/linux/")
+install(DIRECTORY "${NATIVE_ASSETS_DIR}"
+   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+   COMPONENT Runtime)
 
 # Fully re-copy the assets directory on each build to avoid having stale files
 # from a previous install.

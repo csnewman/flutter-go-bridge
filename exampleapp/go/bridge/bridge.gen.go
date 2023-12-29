@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	orig "github.com/csnewman/flutter-go-bridge/example"
+	orig "github.com/csnewman/flutter-go-bridge/exampleapp/go"
 	"github.com/csnewman/flutter-go-bridge/runtime"
 )
 
@@ -164,11 +164,11 @@ func fgb_add(arg_a C.int, arg_b C.int) (resw C.fgb_ret_add) {
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-
+	
 	arggo_a := (int)(arg_a)
 	arggo_b := (int)(arg_b)
 	gres := orig.Add(arggo_a, arggo_b)
-
+	
 	cres := (C.int)(gres)
 
 	return C.fgb_ret_add{
@@ -219,11 +219,11 @@ func fgb_add_points(arg_a C.fgb_vt_point, arg_b C.fgb_vt_point) (resw C.fgb_ret_
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-
+	
 	arggo_a := mapToPoint(arg_a)
 	arggo_b := mapToPoint(arg_b)
 	gres := orig.AddPoints(arggo_a, arggo_b)
-
+	
 	cres := mapFromPoint(gres)
 
 	return C.fgb_ret_add_points{
@@ -274,7 +274,7 @@ func fgb_add_error(arg_a C.int, arg_b C.int) (resw C.fgb_ret_add_error) {
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-
+	
 	arggo_a := (int)(arg_a)
 	arggo_b := (int)(arg_b)
 	gres, gerr := orig.AddError(arggo_a, arggo_b)
@@ -283,7 +283,7 @@ func fgb_add_error(arg_a C.int, arg_b C.int) (resw C.fgb_ret_add_error) {
 			err: unsafe.Pointer(C.CString(gerr.Error())),
 		}
 	}
-
+	
 	cres := (C.int)(gres)
 
 	return C.fgb_ret_add_error{
@@ -334,11 +334,11 @@ func fgb_new_obj(arg_name unsafe.Pointer, arg_other C.int) (resw C.fgb_ret_new_o
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-
+	
 	arggo_name := mapToString(arg_name)
 	arggo_other := (int)(arg_other)
 	gres := orig.NewObj(arggo_name, arggo_other)
-
+	
 	cres := mapFromObj(gres)
 
 	return C.fgb_ret_new_obj{
@@ -389,11 +389,13 @@ func fgb_modify_obj(arg_o unsafe.Pointer) (resw C.fgb_ret_modify_obj) {
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-
+	
 	arggo_o := mapToObj(arg_o)
 	orig.ModifyObj(arggo_o)
+	
 
-	return C.fgb_ret_modify_obj{}
+	return C.fgb_ret_modify_obj{
+	}
 }
 
 //export fgbasync_modify_obj
@@ -439,10 +441,10 @@ func fgb_format_obj(arg_o unsafe.Pointer) (resw C.fgb_ret_format_obj) {
 			err: unsafe.Pointer(C.CString(fmt.Sprintf("panic: %v", r))),
 		}
 	}()
-
+	
 	arggo_o := mapToObj(arg_o)
 	gres := orig.FormatObj(arggo_o)
-
+	
 	cres := mapFromString(gres)
 
 	return C.fgb_ret_format_obj{

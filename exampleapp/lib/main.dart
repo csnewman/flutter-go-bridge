@@ -1,8 +1,4 @@
-import 'dart:ffi';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-
 import 'bridge.gen.dart';
 
 Bridge? _bridge;
@@ -12,10 +8,7 @@ Bridge getBridge() {
     return _bridge!;
   }
 
-  var path = Platform.isWindows ? "example.dll" : "libexample.so";
-  var lib = DynamicLibrary.open(path);
-  _bridge = Bridge.open(lib);
-
+  _bridge = Bridge.open();
   return _bridge!;
 }
 
