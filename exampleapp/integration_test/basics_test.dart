@@ -65,6 +65,8 @@ void main() {
         home: Scaffold(body: Example1()),
       ));
 
+      await tester.pumpAndSettle();
+
       expect(getText(t["elem-text"]!), notCalledText);
 
       await tester.tap(find.byKey(Key(t["elem-button"]!)));
