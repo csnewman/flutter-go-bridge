@@ -70,7 +70,8 @@ void main() {
       expect(getText(t["elem-text"]!), notCalledText);
 
       await tester.tap(find.byKey(Key(t["elem-button"]!)));
-      await tester.pumpAndSettle();
+
+      await tester.pumpAndSettle(const Duration(milliseconds: 1000));
 
       expect(getText(t["elem-text"]!), t["result"]!);
     });
