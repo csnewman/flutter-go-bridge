@@ -4,11 +4,11 @@ Reuse existing Go libraries in Flutter by calling Go from Dart using auto genera
 
 ### Features
 
-- Windows, Linux and Android support.
-    - iOS and macOS untested but likely works.
+- MacOS, iOS, Windows, Linux and Android support.
 - Sync and Async calls from Dart.
 - Passing primitives (various `int`'s), `string`'s and nested structures.
 - Automatic `error` to `Exception` mapping.
+- Basic object passing.
 
 ### Getting Started
 
@@ -19,18 +19,19 @@ Reuse existing Go libraries in Flutter by calling Go from Dart using auto genera
 
 2. Create a wrapper around your Go code.
     - See [Go wrapper](#go-wrapper) below.
-    - See [example](https://github.com/csnewman/flutter-go-bridge/blob/master/example/example.go) for an example.
+    - See [example](https://github.com/csnewman/flutter-go-bridge/blob/master/exampleapp/go/example.go) for an example.
 
 3. Generate bindings
-    - `go generate` in the directory containing your wrapper.
+    - Run `go generate` in the directory containing your wrapper.
 
 4. Use the generated bindings from your Flutter/Dart application
 
 5. Automate library building by integrating into flutter build.
     - See [Platform building](#platform-building) below.
-    - See `exampleapp` for an example.
+    - See the `exampleapp` folder for a full example.
 
-6. When modifying the Go code, you will likely need to call `flutter clean` to trigger a rebuild.
+6. When modifying the Go code, you may need to call `flutter clean` to trigger a rebuild, dependent upon your Go source 
+   location and configured source directories.
 
 ### Go wrapper
 
@@ -39,14 +40,14 @@ The bridge does not support all Go constructs and instead relies on a subset. Th
 Therefore, you should create a Go package containing a wrapper around more complex Go libraries. The generator will scan
 this package and generate a `bridge` package containing the necessary FFI bridging logic.
 
-See [example](https://github.com/csnewman/flutter-go-bridge/blob/master/example/example.go) for a complete example.
+See [example](https://github.com/csnewman/flutter-go-bridge/blob/master/exampleapp/go/example.go) for a complete example.
 
 The process is as follows:
 
-1. `mkdir example`
-2. Create `example/example.go`, containing the following:
+1. `mkdir go` (inside the Flutter project)
+2. Create `go/example.go`, containing the following:
    ```go
-    //go:generate go run github.com/csnewman/flutter-go-bridge/cmd/flutter-go-bridge generate --src example.go --go bridge/bridge.gen.go --dart ../exampleapp/lib/bridge.gen.dart
+    //go:generate go run github.com/csnewman/flutter-go-bridge/cmd/flutter-go-bridge generate --src example.go --go bridge/bridge.gen.go --dart ../lib/bridge.gen.dart
     package example
    ```
    Replace the `--dart` path, with a suitable location inside your flutter applications `lib` directory.
@@ -63,11 +64,8 @@ From Dart:
    ```
 2. Load library
    ```dart
-   var lib = DynamicLibrary.open(Platform.isWindows ? "example.dll" : "libexample.so");
-   var bridge = Bridge.open(lib);
+   var bridge = Bridge.open();
    ```
-   NOTE: The `open` function is planned to be replaced with an autoconfiguring version, which will automatically select
-   the correct file.
 3. Invoke functions
    ```dart
    bridge.example();
@@ -145,109 +143,83 @@ Structs passed in this manner will be passed by `value`, meaning the contents wi
 
 Value structs can not contain private fields.
 
+#### Objects
+
+TODO: Document
+
 ### Platform building
 
 The platforms supported by `flutter` use various build tooling, which complicates integrating Go into the build
-pipeline. The approach outlined below attempts to unify the configuration where possible.
+pipeline. Originally this project had hooks into the build systems for Windows, Linux and Android, however this had
+high maintenance and was not trivial to integrate into the Mac ecosystem.
 
-A complete example can be seen in `exampleapp`.
+Flutter (& Dart) currently have an experimental feature called
+[Native Assets](https://github.com/flutter/flutter/issues/129757) which greatly simplifies the setup. This does however
+mean that for now, this project requires using the flutter `master` channel.
 
-#### Shared setup
+#### Native Assets approach
 
-Inside your flutter project, create a directory called `golib` next to the `pubspec.yaml` file.
+A complete example can be seen in the `exampleapp` folder.
 
-Inside `golib`, create a file called `CMakeLists.txt` and copy the contents from
-the [exampleapp](https://github.com/csnewman/flutter-go-bridge/blob/master/exampleapp/golib/CMakeLists.txt).
+1. Switch to the `master` flutter channel
+   ```bash
+   flutter channel master
+   ```
+2. Enable the [Native Assets](https://github.com/flutter/flutter/issues/129757) experiment
+   ```bash
+   flutter config --enable-native-asset
+   ```
+3. Add the required dependencies to `pubspec.yaml`
+   ```yaml
+   cli_config: ^0.1.2
+   logging: ^1.2.0
+   native_assets_cli: ^0.3.2
+   go_native_toolchain: ^0.0.1
+   ffi: ^2.1.0
+   ```
+4. Fetch dependencies
+   ```bash
+   flutter pub get
+   ```
+5. Create a `build.dart` file
+   ```dart
+   import 'package:go_native_toolchain/go_native_toolchain.dart';
+   import 'package:logging/logging.dart';
+   import 'package:native_assets_cli/native_assets_cli.dart';
+   
+   const packageName = 'exampleapp';
+   
+   void main(List<String> args) async {
+     final buildConfig = await BuildConfig.fromArgs(args);
+     final buildOutput = BuildOutput();
+     
+     final gobuilder = GoBuilder(
+       name: packageName,
+       assetId: 'package:$packageName/bridge.gen.dart',
+       bridgePath: 'go/bridge'
+     );
+   
+     await gobuilder.run(
+       buildConfig: buildConfig,
+       buildOutput: buildOutput,
+       logger: Logger('')..onRecord.listen((record) => print(record.message)),
+     );
+     await buildOutput.writeToFile(outDir: buildConfig.outDir);
+   }
+   ```
+   The `assetId` path needs to match the location of the autogenerated `bridge.gen.dart` file, as flutter uses this
+   internally to automate library resolution. You may need to specify a list of source directories to the `GoBuilder`
+   to allow automatic rebuilding as necessary.
 
-Update the `LIBNAME` variable to match the final name you want the library to have on disk, such as `example`
-becomes `libexample.so` and `example.dll`.
-
-`GOSRC` should point to the directory containing your `go.mod` file.
-
-`GOMAIN` should be the relative path to the generated Go bridge from the `GOSRC` directory.
-
-#### Linux
-
-Inside `linux/CMakeLists.txt`, after `include(flutter/generated_plugins.cmake)`, insert:
-
-```
-# go-flutter-bridge
-add_subdirectory(../golib gobuild)
-add_dependencies(${BINARY_NAME} libexample)
-list(APPEND PLUGIN_BUNDLED_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/gobuild/libexample.so)
-```
-
-Replacing `example` with your `LIBNAME`.
-
-See the [exampleapp](https://github.com/csnewman/flutter-go-bridge/blob/master/exampleapp/linux/CMakeLists.txt) for
-an example.
-
-#### Windows
-
-Inside `windows/CMakeLists.txt`, after `include(flutter/generated_plugins.cmake)`, insert:
-
-```
-# go-flutter-bridge
-add_subdirectory(../golib gobuild)
-add_dependencies(${BINARY_NAME} libexample)
-list(APPEND PLUGIN_BUNDLED_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/gobuild/example.dll)
-```
-
-Replacing `example` with your `LIBNAME`.
-
-Flutter by default will use MSVCC to compile the desktop application. MSVCC is currently not compatible with CGO.
-
-You will need to install and configure a compatible CGO compiler, such as `mingw`:
-1. Download `x86_64-[...]-release-posix-seh-msvcrt-[...].7z` from [GitHub](https://github.com/niXman/mingw-builds-binaries/releases).
-2. Extract to `C:\mingw`
-3. Add `C:\mingw\bin` to your system path.
-
-Alternatively, `zig c` may be suitable. 
-
-See the [exampleapp](https://github.com/csnewman/flutter-go-bridge/blob/master/exampleapp/windows/CMakeLists.txt) for
-an example.
-
-#### Android
-
-Add the following to `android/app/build.gradle`:
-
-Under `defaultConfig`:
-
-```
-externalNativeBuild {
-    cmake {
-        targets "libexample"
-    }
-}
-```
-
-Replacing `example` with your `LIBNAME`.
-
-Under `android`:
-
-```
-externalNativeBuild {
-    cmake {
-        path "../../golib/CMakeLists.txt"
-    }
-}
-```
-
-See the [exampleapp](https://github.com/csnewman/flutter-go-bridge/blob/master/exampleapp/android/app/build.gradle) for
-an example.
-
-#### iOS/macOS
-
-While the generated code should be compatible with iOS and macOS, no guidelines are available due to a lack of access to
-such hardware. If you have integrated with iOS/macOS, please consider opening a pull request with instructions.
+You should now be able to use your IDE and other tooling as usual.
 
 #### Manual building
 
-If you are not using Flutter, or wish to customise the build process, you can manually build the Go library and bundle
-with your application as necessary:
+If you do not want to use the `master` channel or wish to customise the build process, you can manually build the Go
+library and bundle with your application as necessary:
 
-```
+```bash
 CGO_ENABLED=1 go build -buildmode=c-shared -o libexample.so example/bridge/bridge.gen.go
 ```
 
-You can specify `GOOS` and `GOARCH`.
+You can specify `GOOS` and `GOARCH` as necessary.
