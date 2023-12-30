@@ -234,7 +234,7 @@ class _Example1State extends State<Example1> {
                 });
               },
               key: const Key('button-obj-sync'),
-              child: const Text("AddErrors (sync)"),
+              child: const Text("Obj format (sync)"),
             ),
             Expanded(
               child: Text(
@@ -261,7 +261,7 @@ class _Example1State extends State<Example1> {
                     );
               },
               key: const Key('button-obj-async'),
-              child: const Text("AddError (async)"),
+              child: const Text("Obj format (async)"),
             ),
             Expanded(
               child: Text(
