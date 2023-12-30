@@ -167,7 +167,7 @@ A complete example can be seen in the `exampleapp` folder.
    ```
 2. Enable the [Native Assets](https://github.com/flutter/flutter/issues/129757) experiment
    ```bash
-   flutter config --enable-native-asset
+   flutter config --enable-native-assets
    ```
 3. Add the required dependencies to `pubspec.yaml`
    ```yaml
