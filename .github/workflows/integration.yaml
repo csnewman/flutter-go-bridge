@@ -30,6 +30,36 @@ jobs:
           script: |
             flutter doctor
             cd exampleapp && flutter test -d android --timeout none -v integration_test/
+  ios:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'master'
+      - run: flutter config --enable-native-assets
+      - uses: futureware-tech/simulator-action@v3
+        id: sim
+        with:
+          model: 'iPhone 14'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - run: cd exampleapp && flutter test -d ${{ steps.sim.outputs.udid }} --timeout none -v integration_test/
+  macos:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'master'
+      - run: flutter config --enable-native-assets
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - run: cd exampleapp && flutter test -d macos --timeout none -v integration_test/
   linux:
     runs-on: ubuntu-latest
     steps:
