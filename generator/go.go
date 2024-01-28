@@ -18,8 +18,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"sync"
-	"sync/atomic"
 	"unsafe"
 
 	orig "{{$top.TgtPkg}}"
@@ -48,36 +46,10 @@ typedef struct {
 */
 import "C"
 
-var (
-	handles   = sync.Map{}
-	handleIdx uint64
-	ErrDart   = errors.New("dart")
-)
+var ErrDart = errors.New("dart")
 
 // Required by cgo
 func main() {}
-
-//export fgbinternal_init
-func fgbinternal_init(p unsafe.Pointer) unsafe.Pointer {
-	err := runtime.InitializeApi(p)
-
-	var cerr unsafe.Pointer
-	if err != nil {
-		cerr = unsafe.Pointer(C.CString(err.Error()))
-	}
-
-	return cerr
-}
-
-//export fgbinternal_alloc
-func fgbinternal_alloc(size C.intptr_t) unsafe.Pointer {
-	return C.malloc((C.uintptr_t)(size))
-}
-
-//export fgbinternal_free
-func fgbinternal_free(ptr unsafe.Pointer) {
-	C.free(ptr)
-}
 
 func mapToString(from unsafe.Pointer) string {
 	res := C.GoString((*C.char)(from))
@@ -133,34 +105,12 @@ func mapFrom{{$s.PascalName}}(from orig.{{$s.OrigName}}) (res C.fgb_vt_{{$s.Snak
 {{- end}}
 {{- range $s := $top.RefStructs}}
 
-func mapTo{{$s.PascalName}}(from unsafe.Pointer) *orig.{{$s.OrigName}} {
-{{- /* TODO: Add special 32bit handling */}}
-	h := uint64(uintptr(from))
-
-	v, ok := handles.Load(h)
-	if !ok {
-		panic(fmt.Sprintf("invalid handle: %v", h))
-	}
-
-	return v.(*orig.{{$s.OrigName}})
+func mapTo{{$s.PascalName}}(from C.uintptr_t) *orig.{{$s.OrigName}} {
+	return runtime.GetPin[*orig.{{$s.OrigName}}](uintptr(from))
 }
 
-func mapFrom{{$s.PascalName}}(from *orig.{{$s.OrigName}}) unsafe.Pointer {
-	h := atomic.AddUint64(&handleIdx, 1)
-	if h == 0 {
-		panic("ran out of handle space")
-	}
-
-	handles.Store(h, from)
-
-	return unsafe.Pointer(uintptr(h))
-}
-
-//export fgbfree_{{$s.SnakeName}}
-func fgbfree_{{$s.SnakeName}}(from unsafe.Pointer) {
-	h := uint64(uintptr(from))
-
-	handles.Delete(h)
+func mapFrom{{$s.PascalName}}(from *orig.{{$s.OrigName}}) C.uintptr_t {
+	return (C.uintptr_t)(runtime.Pin(from))
 }
 {{- end}}
 {{range $f := $top.Functions}}
@@ -217,31 +167,22 @@ func fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}ar
 //export fgbasync_{{$f.SnakeName}}
 func fgbasync_{{$f.SnakeName}}({{range $p := $f.Params}}arg_{{$p.Name}} {{$p.GoCType}}, {{end}}fgbPort int64) {
 	go func() {
-		h := atomic.AddUint64(&handleIdx, 1)
-		if h == 0 {
-			panic("ran out of handle space")
-		}
-
-		handles.Store(h, fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}arg_{{$p.Name}}{{end}}))
+		value := fgb_{{$f.SnakeName}}({{range $i, $p := $f.Params}}{{if gt $i 0}}, {{end}}arg_{{$p.Name}}{{end}})
+		ptr := runtime.Pin(value)
+		h := uint64(ptr)
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		})
 		if !sent {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		}
 	}()
 }
 
 //export fgbasyncres_{{$f.SnakeName}}
 func fgbasyncres_{{$f.SnakeName}}(h uint64) C.fgb_ret_{{$f.SnakeName}} {
-	v, ok := handles.LoadAndDelete(h)
-	if !ok {
-		return C.fgb_ret_{{$f.SnakeName}}{
-			err: unsafe.Pointer(C.CString("result handle is not valid")),
-		}
-	}
-
-	return (v).(C.fgb_ret_{{$f.SnakeName}})
+	ptr := uintptr(h)
+	return runtime.GetPin[C.fgb_ret_{{$f.SnakeName}}](ptr)
 }
 {{end}}`

@@ -57,11 +57,6 @@ final class _Ffi{{$s.PascalName}} implements {{$s.PascalName}}, ffi.Finalizable 
   }
 }
 
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>(symbol: "fgbfree_{{$s.SnakeName}}")
-external void _fgbIntFree{{$s.PascalName}}(ffi.Pointer<ffi.Void> arg0);
-
-ffi.Pointer<ffi.NativeFinalizerFunction> _free{{$s.PascalName}}Ptr = ffi.Native.addressOf(_fgbIntFree{{$s.PascalName}});
-
 {{- end}}
 {{- range $s := $top.ValueStructs}}
 
@@ -111,6 +106,11 @@ external ffi.Pointer _fgbInternalAlloc(int arg0);
 
 @ffi.Native<ffi.Void Function(ffi.Pointer)>(symbol: "fgbinternal_free")
 external void _fgbInternalFree(ffi.Pointer arg0);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>(symbol: "fgbinternal_freepin")
+external void _fgbInternalFreePin(ffi.Pointer<ffi.Void> arg0);
+
+ffi.Pointer<ffi.NativeFinalizerFunction> _fgbInternalFreePinPtr = ffi.Native.addressOf(_fgbInternalFreePin);
 
 class _GoAllocator implements ffi.Allocator {
   const _GoAllocator();
@@ -192,13 +192,11 @@ external _FgbRet{{$f.PascalName}} _fgbAsyncRes{{$f.PascalName}}(int arg0);
 
 final class _FfiBridge implements Bridge {
   late _GoAllocator _allocator;
-
-{{- range $s := $top.RefStructs}}
-  late ffi.NativeFinalizer _{{$s.CamelName}}Finalizer;
-{{- end}}
+  late ffi.NativeFinalizer _pinFinalizer;
 
   _FfiBridge() {
     _allocator = const _GoAllocator();
+    _pinFinalizer = ffi.NativeFinalizer(_fgbInternalFreePinPtr);
 
     var initRes = _fgbInternalInit(ffi.NativeApi.initializeApiDLData);
     if (initRes != ffi.nullptr) {
@@ -208,9 +206,6 @@ final class _FfiBridge implements Bridge {
 
       throw BridgeException(errMsg);
     }
-{{range $s := $top.RefStructs}}
-    _{{$s.CamelName}}Finalizer = ffi.NativeFinalizer(_free{{$s.PascalName}}Ptr);
-{{- end}}
   }
 {{range $f := $top.Functions}}
   @override
@@ -308,7 +303,7 @@ final class _FfiBridge implements Bridge {
 
   {{$s.PascalName}} _mapTo{{$s.PascalName}}(ffi.Pointer<ffi.Void> from) {
     var res = _Ffi{{$s.PascalName}}(from);
-    _{{$s.CamelName}}Finalizer.attach(res, from);
+    _pinFinalizer.attach(res, from);
     return res;
   }
 

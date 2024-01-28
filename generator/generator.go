@@ -333,9 +333,9 @@ func (g *generator) mapType(pt parser.Type) (Type, error) {
 		}
 
 		return Type{
-			CType:     "void*",
+			CType:     "uintptr_t",
 			GoType:    "*orig." + ident.Name,
-			GoCType:   "unsafe.Pointer",
+			GoCType:   "C.uintptr_t",
 			GoMode:    "map",
 			MapName:   strcase.ToCamel(ident.Name),
 			DartCType: "ffi.Pointer<ffi.Void>",

@@ -1,44 +1,32 @@
 package runtime
 
 /*
-
 #include "dart_api_dl.h"
-#include <string.h>
 #include <stdlib.h>
 
-extern void ifgb_callback(void* ptr);
-
-void InternalBlobCallback(void* isolate_callback_data, void* peer) {
-    ifgb_callback(peer);
-}
-
-bool InternalPostBlob(Dart_Port port_id, intptr_t len, void* data, void* peer) {
-    Dart_CObject obj;
-    obj.type = Dart_CObject_kUnmodifiableExternalTypedData;
-    obj.value.as_external_typed_data.type = Dart_TypedData_kUint64;
-    obj.value.as_external_typed_data.length = len;
-    obj.value.as_external_typed_data.data = data;
-    obj.value.as_external_typed_data.peer = peer;
-    obj.value.as_external_typed_data.callback = &InternalBlobCallback;
-    return Dart_PostCObject_DL(port_id, &obj);
-}
-
-void* CloneUInt64Array(intptr_t len, void* data) {
-    void* ptr = malloc(len * sizeof(uint64_t));
-    memcpy(ptr, data, len * sizeof(uint64_t));
-    return ptr;
-}
-
+extern bool InternalPostBlob(Dart_Port port_id, intptr_t len, void* data, uintptr_t peer);
+extern void* CloneUInt64Array(intptr_t len, void* data);
 */
 import "C"
 
 import (
 	"errors"
-	"runtime/cgo"
 	"unsafe"
 )
 
 var ErrDartIncompatible = errors.New("DartVM major version does not match")
+
+//export fgbinternal_init
+func fgbinternal_init(p unsafe.Pointer) unsafe.Pointer {
+	err := InitializeApi(p)
+
+	var cerr unsafe.Pointer
+	if err != nil {
+		cerr = unsafe.Pointer(C.CString(err.Error()))
+	}
+
+	return cerr
+}
 
 func InitializeApi(p unsafe.Pointer) error {
 	v := C.Dart_InitializeApiDL(p)
@@ -50,6 +38,16 @@ func InitializeApi(p unsafe.Pointer) error {
 	return nil
 }
 
+//export fgbinternal_alloc
+func fgbinternal_alloc(size C.intptr_t) unsafe.Pointer {
+	return C.malloc((C.uintptr_t)(size))
+}
+
+//export fgbinternal_free
+func fgbinternal_free(ptr unsafe.Pointer) {
+	C.free(ptr)
+}
+
 type sendData struct {
 	ptr      unsafe.Pointer
 	callback func()
@@ -57,16 +55,28 @@ type sendData struct {
 
 func Send(port int64, data []uint64, callback func()) bool {
 	ptr := C.CloneUInt64Array(C.intptr_t(len(data)), unsafe.Pointer(&data[0]))
-	h := cgo.NewHandle(&sendData{
+	h := Pin(&sendData{
 		ptr:      ptr,
 		callback: callback,
 	})
 
-	sent := bool(C.InternalPostBlob(C.Dart_Port_DL(port), C.intptr_t(len(data)), ptr, unsafe.Pointer(h)))
+	sent := bool(C.InternalPostBlob(C.Dart_Port_DL(port), C.intptr_t(len(data)), ptr, (C.uintptr_t)(h)))
 	if !sent {
 		C.free(ptr)
-		h.Delete()
+		FreePin(h)
 	}
 
 	return sent
+}
+
+//export ifgb_callback
+func ifgb_callback(p uintptr) {
+	data := GetPin[*sendData](p)
+
+	if data.callback != nil {
+		data.callback()
+	}
+
+	C.free(data.ptr)
+	FreePin(p)
 }
