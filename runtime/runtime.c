@@ -4,6 +4,12 @@
 #include <pthread.h>
 #include "dart_api_dl.h"
 
+#ifdef _WIN32
+#define FGBEXPORT __declspec(dllexport)
+#else
+#define FGBEXPORT
+#endif
+
 // GC related callbacks (pins, ports) need to spawn a separate thread before calling Go to prevent crashing on darwin.
 
 extern void fgbinternal_freepingo(void* ptr);
@@ -14,7 +20,7 @@ void* fgbinternal_freepinthread(void* ptr) {
     return 0;
 }
 
-void fgbinternal_freepin(void* token) {
+FGBEXPORT void fgbinternal_freepin(void* token) {
     pthread_t id;
     pthread_create(&id, NULL, fgbinternal_freepinthread, token);
     pthread_detach(id);
