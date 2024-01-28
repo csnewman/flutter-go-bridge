@@ -61,11 +61,16 @@ void main() {
   for (var t in basicTests) {
     print(t);
     testWidgets(t["name"]!, (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(body: Example1()),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(),
+          body: const Example1(),
+        ),
       ));
 
       await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(Key(t["elem-button"]!)));
 
       expect(getText(t["elem-text"]!), notCalledText);
 
