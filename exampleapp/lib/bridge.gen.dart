@@ -57,11 +57,6 @@ final class _FfiObj implements Obj, ffi.Finalizable {
   }
 }
 
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>(symbol: "fgbfree_obj")
-external void _fgbIntFreeObj(ffi.Pointer<ffi.Void> arg0);
-
-ffi.Pointer<ffi.NativeFinalizerFunction> _freeObjPtr = ffi.Native.addressOf(_fgbIntFreeObj);
-
 final class Point {
   int x;
   int y;
@@ -94,6 +89,11 @@ external ffi.Pointer _fgbInternalAlloc(int arg0);
 
 @ffi.Native<ffi.Void Function(ffi.Pointer)>(symbol: "fgbinternal_free")
 external void _fgbInternalFree(ffi.Pointer arg0);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>(symbol: "fgbinternal_freepin")
+external void _fgbInternalFreePin(ffi.Pointer<ffi.Void> arg0);
+
+ffi.Pointer<ffi.NativeFinalizerFunction> _fgbInternalFreePinPtr = ffi.Native.addressOf(_fgbInternalFreePin);
 
 class _GoAllocator implements ffi.Allocator {
   const _GoAllocator();
@@ -200,10 +200,11 @@ external _FgbRetFormatObj _fgbAsyncResFormatObj(int arg0);
 
 final class _FfiBridge implements Bridge {
   late _GoAllocator _allocator;
-  late ffi.NativeFinalizer _objFinalizer;
+  late ffi.NativeFinalizer _pinFinalizer;
 
   _FfiBridge() {
     _allocator = const _GoAllocator();
+    _pinFinalizer = ffi.NativeFinalizer(_fgbInternalFreePinPtr);
 
     var initRes = _fgbInternalInit(ffi.NativeApi.initializeApiDLData);
     if (initRes != ffi.nullptr) {
@@ -213,8 +214,6 @@ final class _FfiBridge implements Bridge {
 
       throw BridgeException(errMsg);
     }
-
-    _objFinalizer = ffi.NativeFinalizer(_freeObjPtr);
   }
 
   @override
@@ -401,7 +400,7 @@ final class _FfiBridge implements Bridge {
 
   Obj _mapToObj(ffi.Pointer<ffi.Void> from) {
     var res = _FfiObj(from);
-    _objFinalizer.attach(res, from);
+    _pinFinalizer.attach(res, from);
     return res;
   }
 

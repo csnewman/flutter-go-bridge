@@ -4,8 +4,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"sync"
-	"sync/atomic"
 	"unsafe"
 
 	orig "github.com/csnewman/flutter-go-bridge/exampleapp/go"
@@ -38,7 +36,7 @@ typedef struct {
 } fgb_ret_add_error;
 
 typedef struct {
-	void* res;
+	uintptr_t res;
 	void* err;
 } fgb_ret_new_obj;
 
@@ -53,36 +51,10 @@ typedef struct {
 */
 import "C"
 
-var (
-	handles   = sync.Map{}
-	handleIdx uint64
-	ErrDart   = errors.New("dart")
-)
+var ErrDart = errors.New("dart")
 
 // Required by cgo
 func main() {}
-
-//export fgbinternal_init
-func fgbinternal_init(p unsafe.Pointer) unsafe.Pointer {
-	err := runtime.InitializeApi(p)
-
-	var cerr unsafe.Pointer
-	if err != nil {
-		cerr = unsafe.Pointer(C.CString(err.Error()))
-	}
-
-	return cerr
-}
-
-//export fgbinternal_alloc
-func fgbinternal_alloc(size C.intptr_t) unsafe.Pointer {
-	return C.malloc((C.uintptr_t)(size))
-}
-
-//export fgbinternal_free
-func fgbinternal_free(ptr unsafe.Pointer) {
-	C.free(ptr)
-}
 
 func mapToString(from unsafe.Pointer) string {
 	res := C.GoString((*C.char)(from))
@@ -123,33 +95,12 @@ func mapFromPoint(from orig.Point) (res C.fgb_vt_point) {
 	return
 }
 
-func mapToObj(from unsafe.Pointer) *orig.Obj {
-	h := uint64(uintptr(from))
-
-	v, ok := handles.Load(h)
-	if !ok {
-		panic(fmt.Sprintf("invalid handle: %v", h))
-	}
-
-	return v.(*orig.Obj)
+func mapToObj(from C.uintptr_t) *orig.Obj {
+	return runtime.GetPin[*orig.Obj](uintptr(from))
 }
 
-func mapFromObj(from *orig.Obj) unsafe.Pointer {
-	h := atomic.AddUint64(&handleIdx, 1)
-	if h == 0 {
-		panic("ran out of handle space")
-	}
-
-	handles.Store(h, from)
-
-	return unsafe.Pointer(uintptr(h))
-}
-
-//export fgbfree_obj
-func fgbfree_obj(from unsafe.Pointer) {
-	h := uint64(uintptr(from))
-
-	handles.Delete(h)
+func mapFromObj(from *orig.Obj) C.uintptr_t {
+	return (C.uintptr_t)(runtime.Pin(from))
 }
 
 //export fgb_add
@@ -179,32 +130,23 @@ func fgb_add(arg_a C.int, arg_b C.int) (resw C.fgb_ret_add) {
 //export fgbasync_add
 func fgbasync_add(arg_a C.int, arg_b C.int, fgbPort int64) {
 	go func() {
-		h := atomic.AddUint64(&handleIdx, 1)
-		if h == 0 {
-			panic("ran out of handle space")
-		}
-
-		handles.Store(h, fgb_add(arg_a, arg_b))
+		value := fgb_add(arg_a, arg_b)
+		ptr := runtime.Pin(value)
+		h := uint64(ptr)
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		})
 		if !sent {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		}
 	}()
 }
 
 //export fgbasyncres_add
 func fgbasyncres_add(h uint64) C.fgb_ret_add {
-	v, ok := handles.LoadAndDelete(h)
-	if !ok {
-		return C.fgb_ret_add{
-			err: unsafe.Pointer(C.CString("result handle is not valid")),
-		}
-	}
-
-	return (v).(C.fgb_ret_add)
+	ptr := uintptr(h)
+	return runtime.GetPin[C.fgb_ret_add](ptr)
 }
 
 //export fgb_add_points
@@ -234,32 +176,23 @@ func fgb_add_points(arg_a C.fgb_vt_point, arg_b C.fgb_vt_point) (resw C.fgb_ret_
 //export fgbasync_add_points
 func fgbasync_add_points(arg_a C.fgb_vt_point, arg_b C.fgb_vt_point, fgbPort int64) {
 	go func() {
-		h := atomic.AddUint64(&handleIdx, 1)
-		if h == 0 {
-			panic("ran out of handle space")
-		}
-
-		handles.Store(h, fgb_add_points(arg_a, arg_b))
+		value := fgb_add_points(arg_a, arg_b)
+		ptr := runtime.Pin(value)
+		h := uint64(ptr)
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		})
 		if !sent {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		}
 	}()
 }
 
 //export fgbasyncres_add_points
 func fgbasyncres_add_points(h uint64) C.fgb_ret_add_points {
-	v, ok := handles.LoadAndDelete(h)
-	if !ok {
-		return C.fgb_ret_add_points{
-			err: unsafe.Pointer(C.CString("result handle is not valid")),
-		}
-	}
-
-	return (v).(C.fgb_ret_add_points)
+	ptr := uintptr(h)
+	return runtime.GetPin[C.fgb_ret_add_points](ptr)
 }
 
 //export fgb_add_error
@@ -294,32 +227,23 @@ func fgb_add_error(arg_a C.int, arg_b C.int) (resw C.fgb_ret_add_error) {
 //export fgbasync_add_error
 func fgbasync_add_error(arg_a C.int, arg_b C.int, fgbPort int64) {
 	go func() {
-		h := atomic.AddUint64(&handleIdx, 1)
-		if h == 0 {
-			panic("ran out of handle space")
-		}
-
-		handles.Store(h, fgb_add_error(arg_a, arg_b))
+		value := fgb_add_error(arg_a, arg_b)
+		ptr := runtime.Pin(value)
+		h := uint64(ptr)
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		})
 		if !sent {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		}
 	}()
 }
 
 //export fgbasyncres_add_error
 func fgbasyncres_add_error(h uint64) C.fgb_ret_add_error {
-	v, ok := handles.LoadAndDelete(h)
-	if !ok {
-		return C.fgb_ret_add_error{
-			err: unsafe.Pointer(C.CString("result handle is not valid")),
-		}
-	}
-
-	return (v).(C.fgb_ret_add_error)
+	ptr := uintptr(h)
+	return runtime.GetPin[C.fgb_ret_add_error](ptr)
 }
 
 //export fgb_new_obj
@@ -349,36 +273,27 @@ func fgb_new_obj(arg_name unsafe.Pointer, arg_other C.int) (resw C.fgb_ret_new_o
 //export fgbasync_new_obj
 func fgbasync_new_obj(arg_name unsafe.Pointer, arg_other C.int, fgbPort int64) {
 	go func() {
-		h := atomic.AddUint64(&handleIdx, 1)
-		if h == 0 {
-			panic("ran out of handle space")
-		}
-
-		handles.Store(h, fgb_new_obj(arg_name, arg_other))
+		value := fgb_new_obj(arg_name, arg_other)
+		ptr := runtime.Pin(value)
+		h := uint64(ptr)
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		})
 		if !sent {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		}
 	}()
 }
 
 //export fgbasyncres_new_obj
 func fgbasyncres_new_obj(h uint64) C.fgb_ret_new_obj {
-	v, ok := handles.LoadAndDelete(h)
-	if !ok {
-		return C.fgb_ret_new_obj{
-			err: unsafe.Pointer(C.CString("result handle is not valid")),
-		}
-	}
-
-	return (v).(C.fgb_ret_new_obj)
+	ptr := uintptr(h)
+	return runtime.GetPin[C.fgb_ret_new_obj](ptr)
 }
 
 //export fgb_modify_obj
-func fgb_modify_obj(arg_o unsafe.Pointer) (resw C.fgb_ret_modify_obj) {
+func fgb_modify_obj(arg_o C.uintptr_t) (resw C.fgb_ret_modify_obj) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -399,38 +314,29 @@ func fgb_modify_obj(arg_o unsafe.Pointer) (resw C.fgb_ret_modify_obj) {
 }
 
 //export fgbasync_modify_obj
-func fgbasync_modify_obj(arg_o unsafe.Pointer, fgbPort int64) {
+func fgbasync_modify_obj(arg_o C.uintptr_t, fgbPort int64) {
 	go func() {
-		h := atomic.AddUint64(&handleIdx, 1)
-		if h == 0 {
-			panic("ran out of handle space")
-		}
-
-		handles.Store(h, fgb_modify_obj(arg_o))
+		value := fgb_modify_obj(arg_o)
+		ptr := runtime.Pin(value)
+		h := uint64(ptr)
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		})
 		if !sent {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		}
 	}()
 }
 
 //export fgbasyncres_modify_obj
 func fgbasyncres_modify_obj(h uint64) C.fgb_ret_modify_obj {
-	v, ok := handles.LoadAndDelete(h)
-	if !ok {
-		return C.fgb_ret_modify_obj{
-			err: unsafe.Pointer(C.CString("result handle is not valid")),
-		}
-	}
-
-	return (v).(C.fgb_ret_modify_obj)
+	ptr := uintptr(h)
+	return runtime.GetPin[C.fgb_ret_modify_obj](ptr)
 }
 
 //export fgb_format_obj
-func fgb_format_obj(arg_o unsafe.Pointer) (resw C.fgb_ret_format_obj) {
+func fgb_format_obj(arg_o C.uintptr_t) (resw C.fgb_ret_format_obj) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -453,32 +359,23 @@ func fgb_format_obj(arg_o unsafe.Pointer) (resw C.fgb_ret_format_obj) {
 }
 
 //export fgbasync_format_obj
-func fgbasync_format_obj(arg_o unsafe.Pointer, fgbPort int64) {
+func fgbasync_format_obj(arg_o C.uintptr_t, fgbPort int64) {
 	go func() {
-		h := atomic.AddUint64(&handleIdx, 1)
-		if h == 0 {
-			panic("ran out of handle space")
-		}
-
-		handles.Store(h, fgb_format_obj(arg_o))
+		value := fgb_format_obj(arg_o)
+		ptr := runtime.Pin(value)
+		h := uint64(ptr)
 
 		sent := runtime.Send(fgbPort, []uint64{h}, func() {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		})
 		if !sent {
-			handles.LoadAndDelete(h)
+			runtime.FreePin(ptr)
 		}
 	}()
 }
 
 //export fgbasyncres_format_obj
 func fgbasyncres_format_obj(h uint64) C.fgb_ret_format_obj {
-	v, ok := handles.LoadAndDelete(h)
-	if !ok {
-		return C.fgb_ret_format_obj{
-			err: unsafe.Pointer(C.CString("result handle is not valid")),
-		}
-	}
-
-	return (v).(C.fgb_ret_format_obj)
+	ptr := uintptr(h)
+	return runtime.GetPin[C.fgb_ret_format_obj](ptr)
 }

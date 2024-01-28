@@ -11,7 +11,8 @@ void main(List<String> args) async {
   final gobuulder = GoBuilder(
     name: packageName,
     assetId: 'package:$packageName/bridge.gen.dart',
-    bridgePath: 'go/bridge'
+    bridgePath: 'go/bridge',
+    sources: ['go/']
   );
 
   await gobuulder.run(
