@@ -8,10 +8,10 @@
 
 extern void fgbinternal_freepingo(void* ptr);
 
-void fgbinternal_freepinthread(void* ptr) {
+void* fgbinternal_freepinthread(void* ptr) {
     fgbinternal_freepingo(ptr);
 
-    pthread_exit(0);
+    return 0;
 }
 
 void fgbinternal_freepin(void* token) {
@@ -22,10 +22,10 @@ void fgbinternal_freepin(void* token) {
 
 extern void ifgb_callback(void* ptr);
 
-void ifgb_callbackthread(void* ptr) {
+void* ifgb_callbackthread(void* ptr) {
 	ifgb_callback(ptr);
 
-    pthread_exit(0);
+    return 0;
 }
 
 void InternalBlobCallback(void* isolate_callback_data, void* peer) {
@@ -40,7 +40,7 @@ bool InternalPostBlob(Dart_Port port_id, intptr_t len, void* data, uintptr_t pee
     obj.value.as_external_typed_data.type = Dart_TypedData_kUint64;
     obj.value.as_external_typed_data.length = len;
     obj.value.as_external_typed_data.data = data;
-    obj.value.as_external_typed_data.peer = peer;
+    obj.value.as_external_typed_data.peer = (void*)peer;
     obj.value.as_external_typed_data.callback = &InternalBlobCallback;
     return Dart_PostCObject_DL(port_id, &obj);
 }
